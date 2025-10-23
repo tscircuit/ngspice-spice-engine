@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { parseTranParams } from "../src/parse-tran-params"
+import { parseTranParams } from "../lib"
 
 describe("parseTranParams", () => {
   test("parses standard tran command", () => {

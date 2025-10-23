@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { ResultType } from "eecircuit-engine"
-import { eecircuitResultToVGraphs } from "../src/index"
+import { eecircuitResultToVGraphs } from "../lib"
 
 describe("eecircuitResultToVGraphs", () => {
   const baseResult: ResultType = {
