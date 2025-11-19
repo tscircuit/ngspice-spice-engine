@@ -42,4 +42,33 @@ describe("eecircuitResultToVGraphs", () => {
     expect(graphs).toHaveLength(1)
     expect(graphs[0]).toMatchObject({ netName: "out" })
   })
+
+  test("preserves casing from spice string over engine's casing", () => {
+    // Create a result where the engine returns a different casing
+    // than what we'll request.
+    const result: ResultType = {
+      header: "test",
+      numVariables: 2,
+      variableNames: ["time", "v(MyNet)"],
+      numPoints: 3,
+      dataType: "real",
+      data: [
+        {
+          name: "time",
+          type: "time",
+          values: [0, 1, 2],
+        },
+        {
+          type: "voltage",
+          name: "v(mynet)", // engine returns lowercase
+          values: [0, 1, 2],
+        },
+      ],
+    }
+
+    const graphs = eecircuitResultToVGraphs(result, ".print tran V(MyNet)")
+
+    expect(graphs).toHaveLength(1)
+    expect(graphs[0]?.netName).toBe("MyNet")
+  })
 })

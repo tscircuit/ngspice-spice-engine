@@ -28,18 +28,28 @@ const getSimulation = async (): Promise<Simulation> => {
   return simulationPromise
 }
 
-const extractRequestedPlots = (spiceString: string): Set<string> | null => {
+const extractRequestedPlots = (
+  spiceString: string,
+): Map<string, string> | null => {
   const match = spiceString.match(/\.print\s+tran\s+(.*)/i)
   if (!match || !match[1]) {
     return null
   }
 
-  const tokens = match[1].toLowerCase().split(/\s+/).filter(Boolean)
+  const tokens = match[1].split(/\s+/).filter(Boolean)
   if (tokens.length === 0) {
     return null
   }
 
-  return new Set(tokens)
+  const plotMap = new Map<string, string>()
+  for (const token of tokens) {
+    const lowerCaseToken = token.toLowerCase()
+    if (!plotMap.has(lowerCaseToken)) {
+      plotMap.set(lowerCaseToken, token)
+    }
+  }
+
+  return plotMap
 }
 
 const getNetName = (rawName: string): string => {
@@ -73,11 +83,14 @@ export const eecircuitResultToVGraphs = (
       continue
     }
 
-    if (requestedPlots && !requestedPlots.has(item.name.toLowerCase())) {
+    const lowerCaseItemName = item.name.toLowerCase()
+    if (requestedPlots && !requestedPlots.has(lowerCaseItemName)) {
       continue
     }
 
-    const netName = getNetName(item.name)
+    const netName = getNetName(
+      requestedPlots ? requestedPlots.get(lowerCaseItemName)! : item.name,
+    )
 
     graphs.push({
       netName,
