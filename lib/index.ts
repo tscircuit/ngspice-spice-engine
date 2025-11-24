@@ -36,14 +36,15 @@ const extractRequestedPlots = (
     return null
   }
 
-  const tokens = match[1].split(/\s+/).filter(Boolean)
-  if (tokens.length === 0) {
+  const tokens = match[1].match(/[VI]\s*\([^)]+\)/gi)
+
+  if (!tokens) {
     return null
   }
 
   const plotMap = new Map<string, string>()
   for (const token of tokens) {
-    const lowerCaseToken = token.toLowerCase()
+    const lowerCaseToken = token.toLowerCase().replace(/\s/g, "")
     if (!plotMap.has(lowerCaseToken)) {
       plotMap.set(lowerCaseToken, token)
     }
@@ -53,6 +54,11 @@ const extractRequestedPlots = (
 }
 
 const getNetName = (rawName: string): string => {
+  const diffMatch = rawName.match(/^v\(([^,]+),\s*([^)]+)\)$/i)
+  if (diffMatch?.[1] && diffMatch?.[2]) {
+    return `${diffMatch[1].trim()}-${diffMatch[2].trim()}`
+  }
+
   const match = rawName.match(/^v\((.*)\)$/i)
   if (!match) {
     return rawName
@@ -68,35 +74,65 @@ export const eecircuitResultToVGraphs = (
     return []
   }
 
-  const requestedPlots = extractRequestedPlots(spiceString)
   const timeData = result.data.find((item) => item.type === "time")
-
   if (!timeData || !Array.isArray(timeData.values)) {
     return []
   }
+  const timeValues = timeData.values as number[]
 
-  const timeValues = timeData.values
-  const graphs: VoltageGraph[] = []
+  const voltageDataItems = result.data.filter(
+    (item) => item.type === "voltage" && Array.isArray(item.values),
+  )
 
-  for (const item of result.data) {
-    if (item.type !== "voltage" || !Array.isArray(item.values)) {
-      continue
-    }
+  const voltageDataMap = new Map<string, number[]>()
+  for (const item of voltageDataItems) {
+    voltageDataMap.set(item.name.toLowerCase(), item.values as number[])
+  }
 
-    const lowerCaseItemName = item.name.toLowerCase()
-    if (requestedPlots && !requestedPlots.has(lowerCaseItemName)) {
-      continue
-    }
+  const requestedPlots = extractRequestedPlots(spiceString)
 
-    const netName = getNetName(
-      requestedPlots ? requestedPlots.get(lowerCaseItemName)! : item.name,
-    )
-
-    graphs.push({
-      netName,
+  if (!requestedPlots) {
+    // If no plots are requested, return all available voltage plots
+    return voltageDataItems.map((item) => ({
+      netName: getNetName(item.name),
       time: timeValues,
-      voltage: item.values,
-    })
+      voltage: item.values as number[],
+    }))
+  }
+
+  const graphs: VoltageGraph[] = []
+  for (const [lowerCaseToken, originalToken] of requestedPlots.entries()) {
+    const diffMatch = originalToken.match(/^v\(([^,]+),\s*([^)]+)\)$/i)
+    let voltage: number[] | undefined
+
+    if (diffMatch?.[1] && diffMatch?.[2]) {
+      // It's a differential plot request.
+      // First, try to find a pre-calculated plot.
+      voltage = voltageDataMap.get(lowerCaseToken)
+
+      // If not found, try to calculate it from individual nodes.
+      if (!voltage) {
+        const node1 = diffMatch[1].trim()
+        const node2 = diffMatch[2].trim()
+        const node1Data = voltageDataMap.get(`v(${node1.toLowerCase()})`)
+        const node2Data = voltageDataMap.get(`v(${node2.toLowerCase()})`)
+
+        if (node1Data && node2Data) {
+          voltage = node1Data.map((v, i) => v - (node2Data[i] ?? 0))
+        }
+      }
+    } else {
+      // It's a single-ended plot request.
+      voltage = voltageDataMap.get(lowerCaseToken)
+    }
+
+    if (voltage) {
+      graphs.push({
+        netName: getNetName(originalToken),
+        time: timeValues,
+        voltage,
+      })
+    }
   }
 
   return graphs

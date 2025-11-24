@@ -71,4 +71,102 @@ describe("eecircuitResultToVGraphs", () => {
     expect(graphs).toHaveLength(1)
     expect(graphs[0]?.netName).toBe("MyNet")
   })
+
+  test("handles differential voltage plots", () => {
+    const result: ResultType = {
+      header: "test",
+      numVariables: 2,
+      variableNames: ["time", "v(vp_out,n1)"],
+      numPoints: 3,
+      dataType: "real",
+      data: [
+        {
+          name: "time",
+          type: "time",
+          values: [0, 1, 2],
+        },
+        {
+          type: "voltage",
+          name: "v(vp_out,n1)",
+          values: [6, 7, 8],
+        },
+      ],
+    }
+
+    const graphs = eecircuitResultToVGraphs(result, ".print tran V(VP_OUT, N1)")
+
+    expect(graphs).toHaveLength(1)
+    expect(graphs[0]).toMatchObject({ netName: "VP_OUT-N1" })
+  })
+
+  test("handles both normal and differential voltage plots", () => {
+    const result: ResultType = {
+      header: "test",
+      numVariables: 3,
+      variableNames: ["time", "v(vp_in1)", "v(vp_out,n1)"],
+      numPoints: 3,
+      dataType: "real",
+      data: [
+        {
+          name: "time",
+          type: "time",
+          values: [0, 1, 2],
+        },
+        {
+          type: "voltage",
+          name: "v(vp_in1)",
+          values: [3, 4, 5],
+        },
+        {
+          type: "voltage",
+          name: "v(vp_out,n1)",
+          values: [6, 7, 8],
+        },
+      ],
+    }
+
+    const graphs = eecircuitResultToVGraphs(
+      result,
+      ".print tran V(VP_IN1) V(VP_OUT, N1)",
+    )
+
+    expect(graphs).toHaveLength(2)
+    expect(graphs[0]).toMatchObject({ netName: "VP_IN1" })
+    expect(graphs[1]).toMatchObject({ netName: "VP_OUT-N1" })
+  })
+
+  test("calculates differential voltage plots from nodes", () => {
+    const result: ResultType = {
+      header: "test",
+      numVariables: 3,
+      variableNames: ["time", "v(vp_out)", "v(n1)"],
+      numPoints: 3,
+      dataType: "real",
+      data: [
+        {
+          name: "time",
+          type: "time",
+          values: [0, 1, 2],
+        },
+        {
+          type: "voltage",
+          name: "v(vp_out)",
+          values: [10, 12, 14],
+        },
+        {
+          type: "voltage",
+          name: "v(n1)",
+          values: [6, 7, 8],
+        },
+      ],
+    }
+
+    const graphs = eecircuitResultToVGraphs(result, ".print tran V(VP_OUT, N1)")
+
+    expect(graphs).toHaveLength(1)
+    expect(graphs[0]).toMatchObject({
+      netName: "VP_OUT-N1",
+      voltage: [4, 5, 6], // 10-6, 12-7, 14-8
+    })
+  })
 })
