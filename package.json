@@ -19,7 +19,9 @@
   },
   "devDependencies": {
     "@tscircuit/props": "^0.0.374",
+    "bun-match-svg": "^0.0.14",
     "circuit-json": "^0.0.290",
+    "circuit-to-svg": "^0.0.217",
     "@biomejs/biome": "^2.2.7",
     "@types/bun": "latest",
     "tscircuit": "^0.0.805",
