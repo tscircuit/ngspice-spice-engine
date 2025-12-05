@@ -1,6 +1,7 @@
 import type { SpiceEngine } from "@tscircuit/props"
 import type { CircuitJson, SimulationTransientVoltageGraph } from "circuit-json"
 import type { ResultType, Simulation } from "eecircuit-engine"
+import { linearInterpolate } from "./linear-interpolate"
 import { parseTranParams } from "./parse-tran-params"
 
 interface VoltageGraph {
@@ -132,6 +133,35 @@ export const eecircuitResultToVGraphs = (
         time: timeValues,
         voltage,
       })
+    }
+  }
+
+  const tranParams = parseTranParams(spiceString)
+  if (
+    tranParams?.tstep &&
+    tranParams.tstep > 0 &&
+    tranParams.tstop &&
+    graphs.length > 0
+  ) {
+    const { tstep, tstop } = tranParams
+    const tstart = tranParams.tstart ?? 0
+    // Ensure we don't divide by zero and that we have a valid range
+    const numSteps = Math.floor((tstop - tstart) / tstep)
+
+    if (numSteps > 0) {
+      const newTimeValues = Array.from(
+        { length: numSteps + 1 },
+        (_, i) => tstart + i * tstep,
+      )
+      // All graphs from eecircuit-engine share the same time vector.
+      const oldTimeValues = graphs[0]!.time
+      return graphs.map((graph) => ({
+        ...graph,
+        time: newTimeValues,
+        voltage: newTimeValues.map((t) =>
+          linearInterpolate(t, oldTimeValues, graph.voltage),
+        ),
+      }))
     }
   }
 
