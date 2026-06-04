@@ -1,5 +1,4 @@
 * PSPICE PWL REPEAT source syntax not supported by this ngspice build
-.option ngbehavior=ps
 V1 in 0 PWL REPEAT FOREVER (0 0 1u 1 2u 0) ENDREPEAT
 R1 in 0 1k
 .print tran v(in)

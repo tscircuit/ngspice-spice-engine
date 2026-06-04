@@ -1,0 +1,9 @@
+* PSPICE AKO model alias syntax not supported by this ngspice build
+.model DBASE D(IS=1n)
+.model DFAST AKO: DBASE D(IS=2n)
+V1 in 0 PULSE(0 1 0 1u 1u 5u 10u)
+D1 in out DFAST
+R1 out 0 1k
+.print tran v(out)
+.tran 1u 20u
+.end

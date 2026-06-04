@@ -4,9 +4,9 @@ import {
   expectPspiceFixtureToRun,
 } from "./pspice-fixture-utils"
 
-test("runs PSPICE comma-separated resistor TC syntax only with compat mode", () => {
-  const compat = expectPspiceFixtureToRun("resistor-tc.cir")
-  const regular = expectPspiceFixtureToReportError("resistor-tc.cir", {
+test("runs PSPICE simple .lib syntax only with compat mode", () => {
+  const compat = expectPspiceFixtureToRun("simple-lib.cir")
+  const regular = expectPspiceFixtureToReportError("simple-lib.cir", {
     withoutPspiceCompat: true,
   })
 
@@ -18,10 +18,10 @@ test("runs PSPICE comma-separated resistor TC syntax only with compat mode", () 
           "endTimeMs": 0.019999999999999997,
           "firstVoltages": [
             5,
-            4.999999999999994,
-            4.999999999999993,
-            4.999999999999993,
-            4.999999999999993,
+            4.9999999999999885,
+            4.999999999999988,
+            4.999999999999988,
+            4.999999999999988,
           ],
           "name": "out",
           "pointCount": 21,
@@ -32,9 +32,9 @@ test("runs PSPICE comma-separated resistor TC syntax only with compat mode", () 
     }
   `)
   expect(regular.stderr).toMatchInlineSnapshot(`
-    "Error on line 4 or its substitute:
-      r1 in out 1k tc=0.01,0.001
-      unknown parameter (0.001) 
+    "Error on line 2 or its substitute:
+      .lib modelcard.cmos90
+     unimplemented dot command '.lib'
         Simulation interrupted due to error!
 
     Error: circuit not parsed."

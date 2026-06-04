@@ -1,0 +1,8 @@
+* PSPICE simple .lib include syntax not supported by this ngspice build
+.lib modelcard.CMOS90
+V1 in 0 5
+R1 in out 1k
+C1 out 0 1u IC=0
+.print tran v(out)
+.tran 1u 20u
+.end

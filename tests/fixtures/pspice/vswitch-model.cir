@@ -1,0 +1,9 @@
+* PSPICE VSWITCH model syntax not supported by this ngspice build
+Vctrl ctrl 0 PULSE(0 5 0 1u 1u 5u 10u)
+V1 src 0 5
+S1 src out ctrl 0 SWMOD
+.model SWMOD VSWITCH(RON=10 ROFF=1MEG VON=3 VOFF=2)
+R1 out 0 1k
+.print tran v(out)
+.tran 1u 20u
+.end

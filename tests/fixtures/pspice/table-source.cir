@@ -1,5 +1,4 @@
 * PSPICE TABLE source syntax not supported by this ngspice build
-.option ngbehavior=ps
 V1 in 0 PULSE(0 2 0 1u 1u 5u 10u)
 E1 out 0 TABLE {V(in)} = (0,0) (1,2) (2,3)
 R1 out 0 1k

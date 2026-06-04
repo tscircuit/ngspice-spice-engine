@@ -1,8 +1,0 @@
-* PSPICE limit() behavioral function
-.option ngbehavior=ps
-V1 in 0 PULSE(0 10 0 1u 1u 5u 10u)
-B1 out 0 V={limit(V(in), 1, 4)}
-R1 out 0 1k
-.print tran v(out)
-.tran 1u 20u
-.end

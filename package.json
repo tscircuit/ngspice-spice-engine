@@ -17,7 +17,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "eecircuit-engine": "^1.5.6"
+    "eecircuit-engine": "^1.7.0"
   },
   "devDependencies": {
     "@tscircuit/props": "^0.0.374",

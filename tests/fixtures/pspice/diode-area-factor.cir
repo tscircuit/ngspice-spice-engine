@@ -1,0 +1,8 @@
+* PSPICE diode area factor syntax not supported by this ngspice build
+.model DMOD D(IS=1n)
+V1 in 0 PULSE(0 1 0 1u 1u 5u 10u)
+D1 in out DMOD 2
+R1 out 0 1k
+.print tran v(out)
+.tran 1u 20u
+.end
