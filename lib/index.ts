@@ -14,6 +14,10 @@ export interface NgspiceSpiceEngineOptions {
   pspiceCompatibility?: boolean
 }
 
+interface ResolvedNgspiceSpiceEngineOptions {
+  pspiceCompatibility: boolean
+}
+
 interface SimulationWithCommandList {
   commandList?: string[]
 }
@@ -229,7 +233,7 @@ const configureNgBehavior = (
 
 const simulate = async (
   spiceString: string,
-  options: Required<NgspiceSpiceEngineOptions>,
+  options: ResolvedNgspiceSpiceEngineOptions,
 ): Promise<{ simulationResultCircuitJson: CircuitJson }> => {
   const simulation = await getSimulation()
   simulation.setNetList(spiceString)
