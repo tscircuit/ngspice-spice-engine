@@ -1,0 +1,9 @@
+* PSPICE brace-delimited parameter expression
+.option ngbehavior=ps
+.param BASE=1k SCALE=2 RVAL={BASE*SCALE}
+V1 in 0 5
+R1 in out {RVAL}
+C1 out 0 1u IC=0
+.print tran v(out)
+.tran 1u 20u
+.end

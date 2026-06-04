@@ -1,0 +1,9 @@
+* PSPICE comma-separated resistor TC parameter not supported by this ngspice build
+.option ngbehavior=ps
+.temp 75
+V1 in 0 5
+R1 in out 1k TC=0.01,0.001
+C1 out 0 1u IC=0
+.print tran v(out)
+.tran 1u 20u
+.end

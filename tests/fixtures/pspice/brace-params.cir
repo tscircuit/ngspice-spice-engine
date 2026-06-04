@@ -1,0 +1,9 @@
+* PSPICE brace parameter values
+.option ngbehavior=ps
+.param RVAL=1k CVAL=1u
+V1 in 0 5
+R1 in out {RVAL}
+C1 out 0 {CVAL} IC=0
+.print tran v(out)
+.tran 1u 20u
+.end

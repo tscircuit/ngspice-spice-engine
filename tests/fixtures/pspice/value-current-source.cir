@@ -1,0 +1,8 @@
+* PSPICE VALUE current source
+.option ngbehavior=ps
+V1 in 0 SIN(0 1 1k)
+G1 out 0 VALUE = {V(in)/1000}
+R1 out 0 1k
+.print tran v(out)
+.tran 1u 1m
+.end

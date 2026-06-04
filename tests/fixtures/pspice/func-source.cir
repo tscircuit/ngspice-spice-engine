@@ -1,0 +1,9 @@
+* PSPICE .func expression in a behavioral source
+.option ngbehavior=ps
+.func gain(x) {x*2}
+V1 in 0 PULSE(0 1 0 1u 1u 5u 10u)
+B1 out 0 V={gain(v(in))}
+R1 out 0 1k
+.print tran v(out)
+.tran 1u 20u
+.end
