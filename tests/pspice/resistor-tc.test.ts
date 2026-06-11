@@ -18,10 +18,10 @@ test("runs PSPICE comma-separated resistor TC syntax only with compat mode", () 
           "endTimeMs": 0.019999999999999997,
           "firstVoltages": [
             5,
-            4.999999999999997,
-            4.999999999999995,
+            4.999999999999994,
             4.999999999999993,
-            4.99999999999999,
+            4.999999999999993,
+            4.999999999999993,
           ],
           "name": "out",
           "pointCount": 21,

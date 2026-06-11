@@ -5,7 +5,7 @@ import type { SimulationTransientVoltageGraph } from "circuit-json"
 import { createNgspiceSpiceEngine } from "../../lib"
 
 test(
-  "runs TPS63802 model with native PSPICE compatibility",
+  "runs TPS63802 model with embedded PSPICE preprocessing",
   async () => {
     const spiceEngine = await createNgspiceSpiceEngine({
       pspiceCompatibility: true,

@@ -5,7 +5,7 @@ import type { SimulationTransientVoltageGraph } from "circuit-json"
 import { createNgspiceSpiceEngine } from "../../lib"
 
 test(
-  "runs MSPM0G3507 OPA model with native PSPICE compatibility",
+  "runs MSPM0G3507 OPA model with embedded PSPICE preprocessing",
   async () => {
     const spiceEngine = await createNgspiceSpiceEngine({
       pspiceCompatibility: true,

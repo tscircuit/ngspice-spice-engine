@@ -1,13 +1,3 @@
-import { spawnSync } from "node:child_process"
-import {
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 import type { SpiceEngine } from "@tscircuit/props"
 import type { CircuitJson, SimulationTransientVoltageGraph } from "circuit-json"
 import type { ResultType, Simulation } from "eecircuit-engine"
@@ -209,141 +199,96 @@ const voltageGraphsToCircuitJson = (
   }))
 }
 
-const getRawVariableType = (
-  rawType: string,
-): "time" | "voltage" | "current" | "notype" => {
-  const type = rawType.toLowerCase()
-  if (type === "time") return "time"
-  if (type === "voltage") return "voltage"
-  if (type === "current") return "current"
-  return "notype"
+const splitFunctionArguments = (input: string): string[] => {
+  const args: string[] = []
+  let startIndex = 0
+  let parenDepth = 0
+  let braceDepth = 0
+
+  for (let index = 0; index < input.length; index++) {
+    const char = input[index]
+    if (char === "(") parenDepth++
+    else if (char === ")") parenDepth--
+    else if (char === "{") braceDepth++
+    else if (char === "}") braceDepth--
+    else if (char === "," && parenDepth === 0 && braceDepth === 0) {
+      args.push(input.slice(startIndex, index))
+      startIndex = index + 1
+    }
+  }
+
+  args.push(input.slice(startIndex))
+  return args
 }
 
-const parseNgspiceAsciiRaw = (rawString: string): ResultType | null => {
-  const lines = rawString.split(/\r?\n/)
-  const flagsLine = lines.find((line) => line.startsWith("Flags:"))
-  if (!flagsLine?.toLowerCase().includes("real")) {
-    return null
-  }
+const convertPspiceIfFunctions = (input: string): string => {
+  let output = ""
+  let index = 0
 
-  const variablesStartIndex = lines.findIndex(
-    (line) => line.trim() === "Variables:",
-  )
-  const valuesStartIndex = lines.findIndex((line) => line.trim() === "Values:")
-
-  if (
-    variablesStartIndex === -1 ||
-    valuesStartIndex === -1 ||
-    valuesStartIndex <= variablesStartIndex
-  ) {
-    return null
-  }
-
-  const variables = lines
-    .slice(variablesStartIndex + 1, valuesStartIndex)
-    .map((line) => line.trim().split(/\s+/))
-    .filter((parts) => parts.length >= 3)
-    .map((parts) => ({
-      name: parts[1]!,
-      type: getRawVariableType(parts[2]!),
-      values: [] as number[],
-    }))
-
-  if (variables.length === 0) {
-    return null
-  }
-
-  let variableIndex = 0
-  for (const rawLine of lines.slice(valuesStartIndex + 1)) {
-    const line = rawLine.trim()
-    if (!line) continue
-
-    const parts = line.split(/\s+/)
-    const valueToken = variableIndex === 0 ? parts.at(-1) : parts[0]
-    const value = valueToken ? Number.parseFloat(valueToken) : Number.NaN
-
-    if (!Number.isFinite(value)) {
+  while (index < input.length) {
+    const ifMatch = input.slice(index).match(/^if\s*\(/i)
+    if (!ifMatch) {
+      output += input[index]
+      index++
       continue
     }
 
-    variables[variableIndex]!.values.push(value)
-    variableIndex = (variableIndex + 1) % variables.length
+    const openParenIndex = index + ifMatch[0].length - 1
+    let depth = 0
+    let closeParenIndex = -1
+    for (
+      let scanIndex = openParenIndex;
+      scanIndex < input.length;
+      scanIndex++
+    ) {
+      const char = input[scanIndex]
+      if (char === "(") depth++
+      else if (char === ")") {
+        depth--
+        if (depth === 0) {
+          closeParenIndex = scanIndex
+          break
+        }
+      }
+    }
+
+    if (closeParenIndex === -1) {
+      output += input.slice(index)
+      break
+    }
+
+    const innerExpression = convertPspiceIfFunctions(
+      input.slice(openParenIndex + 1, closeParenIndex),
+    )
+    const args = splitFunctionArguments(innerExpression)
+    if (args.length !== 3) {
+      output += input.slice(index, closeParenIndex + 1)
+    } else {
+      output += `((${args[0]!.trim()}) ? (${args[1]!.trim()}) : (${args[2]!.trim()}))`
+    }
+    index = closeParenIndex + 1
   }
 
-  const pointCount = Math.min(
-    ...variables.map((variable) => variable.values.length),
-  )
-  if (pointCount === 0) {
-    return null
-  }
-
-  return {
-    header: "ngspice ascii raw",
-    numVariables: variables.length,
-    variableNames: variables.map((variable) => variable.name),
-    numPoints: pointCount,
-    dataType: "real",
-    data: variables.map((variable) => ({
-      name: variable.name,
-      type: variable.type,
-      values: variable.values.slice(0, pointCount),
-    })),
-  }
+  return output
 }
 
-const runNativePspiceSimulation = (
-  spiceString: string,
-): { simulationResultCircuitJson: CircuitJson } => {
-  const tempDir = mkdtempSync(join(tmpdir(), "ngspice-pspice-"))
-  const netlistPath = join(tempDir, "test.cir")
-  const rawPath = join(tempDir, "out.raw")
-  const logPath = join(tempDir, "out.log")
-
-  try {
-    writeFileSync(join(tempDir, ".spiceinit"), "set ngbehavior=psa\n")
-    writeFileSync(join(tempDir, "modelcard.CMOS90"), "\n")
-    writeFileSync(netlistPath, spiceString)
-
-    const result = spawnSync(
-      "ngspice",
-      ["-b", "-r", "out.raw", "-o", "out.log", "test.cir"],
-      {
-        cwd: tempDir,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          SPICE_ASCIIRAWFILE: "1",
-        },
-        timeout: 120_000,
-      },
+const preprocessPspiceForEmbeddedNgspice = (spiceString: string): string => {
+  let processed = spiceString
+    .replace(/\bif\s*\r?\n\+\s*\(/gi, "if(")
+    .replace(/\.MODEL(\s+\S+\s+)VSWITCH\b/gi, ".MODEL$1SW")
+    .replace(/\b(VON|VOFF)\s*=\s*[^\s)]+/gi, "")
+    .replace(
+      /\b(RON|ROFF)\s*=\s*([^\s)]+)/gi,
+      (_match, key: string, value: string) =>
+        `${key}=${value.replace(/V$/i, "")}`,
     )
+    .replace(/\bTC\s*=\s*([^\s,]+)\s*,\s*([^\s)]+)/gi, "TC1=$1 TC2=$2")
 
-    const log = existsSync(logPath) ? readFileSync(logPath, "utf8") : ""
-    const raw = existsSync(rawPath) ? readFileSync(rawPath, "utf8") : ""
-    const parsedResult = raw ? parseNgspiceAsciiRaw(raw) : null
-
-    if (!parsedResult) {
-      const details = [result.stderr, result.stdout, log]
-        .filter(Boolean)
-        .join("\n")
-        .trim()
-      throw new Error(
-        details
-          ? `Native ngspice PSPICE simulation failed:\n${details}`
-          : "Native ngspice PSPICE simulation failed without producing raw output",
-      )
-    }
-
-    const graphs = eecircuitResultToVGraphs(parsedResult, spiceString)
-    return {
-      simulationResultCircuitJson: voltageGraphsToCircuitJson(
-        graphs,
-        spiceString,
-      ),
-    }
-  } finally {
-    rmSync(tempDir, { recursive: true, force: true })
-  }
+  processed = convertPspiceIfFunctions(processed)
+  return processed
+    .replace(/\s&\s/g, " && ")
+    .replace(/\s\|\s/g, " || ")
+    .replace(/\s\^\s/g, " != ")
 }
 
 const configureNgBehavior = (
@@ -382,13 +327,13 @@ const simulate = async (
   spiceString: string,
   options: ResolvedNgspiceSpiceEngineOptions,
 ): Promise<{ simulationResultCircuitJson: CircuitJson }> => {
-  if (options.pspiceCompatibility) {
-    return runNativePspiceSimulation(spiceString)
-  }
+  const simulationSpiceString = options.pspiceCompatibility
+    ? preprocessPspiceForEmbeddedNgspice(spiceString)
+    : spiceString
 
   const simulation = await getSimulation()
-  simulation.setNetList(spiceString)
-  configureNgBehavior(simulation, options.pspiceCompatibility)
+  simulation.setNetList(simulationSpiceString)
+  configureNgBehavior(simulation, false)
 
   let result: ResultType | null
   try {
