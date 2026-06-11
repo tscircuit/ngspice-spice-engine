@@ -18,7 +18,7 @@ test("runs PSPICE simple .lib syntax only with compat mode", () => {
           "endTimeMs": 0.019999999999999997,
           "firstVoltages": [
             5,
-            4.9999999999999885,
+            4.999999999999988,
             4.999999999999988,
             4.999999999999988,
             4.999999999999988,

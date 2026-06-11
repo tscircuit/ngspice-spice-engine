@@ -1,3 +1,13 @@
+import { spawnSync } from "node:child_process"
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import type { SpiceEngine } from "@tscircuit/props"
 import type { CircuitJson, SimulationTransientVoltageGraph } from "circuit-json"
 import type { ResultType, Simulation } from "eecircuit-engine"
@@ -45,7 +55,7 @@ const extractRequestedPlots = (
   spiceString: string,
 ): Map<string, string> | null => {
   const match = spiceString.match(/\.print\s+tran\s+(.*)/i)
-  if (!match || !match[1]) {
+  if (!match?.[1]) {
     return null
   }
 
@@ -83,7 +93,7 @@ export const eecircuitResultToVGraphs = (
   result: ResultType,
   spiceString: string,
 ): VoltageGraph[] => {
-  if (!result || !result.data || result.dataType !== "real") {
+  if (!result?.data || result.dataType !== "real") {
     return []
   }
 
@@ -199,6 +209,143 @@ const voltageGraphsToCircuitJson = (
   }))
 }
 
+const getRawVariableType = (
+  rawType: string,
+): "time" | "voltage" | "current" | "notype" => {
+  const type = rawType.toLowerCase()
+  if (type === "time") return "time"
+  if (type === "voltage") return "voltage"
+  if (type === "current") return "current"
+  return "notype"
+}
+
+const parseNgspiceAsciiRaw = (rawString: string): ResultType | null => {
+  const lines = rawString.split(/\r?\n/)
+  const flagsLine = lines.find((line) => line.startsWith("Flags:"))
+  if (!flagsLine?.toLowerCase().includes("real")) {
+    return null
+  }
+
+  const variablesStartIndex = lines.findIndex(
+    (line) => line.trim() === "Variables:",
+  )
+  const valuesStartIndex = lines.findIndex((line) => line.trim() === "Values:")
+
+  if (
+    variablesStartIndex === -1 ||
+    valuesStartIndex === -1 ||
+    valuesStartIndex <= variablesStartIndex
+  ) {
+    return null
+  }
+
+  const variables = lines
+    .slice(variablesStartIndex + 1, valuesStartIndex)
+    .map((line) => line.trim().split(/\s+/))
+    .filter((parts) => parts.length >= 3)
+    .map((parts) => ({
+      name: parts[1]!,
+      type: getRawVariableType(parts[2]!),
+      values: [] as number[],
+    }))
+
+  if (variables.length === 0) {
+    return null
+  }
+
+  let variableIndex = 0
+  for (const rawLine of lines.slice(valuesStartIndex + 1)) {
+    const line = rawLine.trim()
+    if (!line) continue
+
+    const parts = line.split(/\s+/)
+    const valueToken = variableIndex === 0 ? parts.at(-1) : parts[0]
+    const value = valueToken ? Number.parseFloat(valueToken) : Number.NaN
+
+    if (!Number.isFinite(value)) {
+      continue
+    }
+
+    variables[variableIndex]!.values.push(value)
+    variableIndex = (variableIndex + 1) % variables.length
+  }
+
+  const pointCount = Math.min(
+    ...variables.map((variable) => variable.values.length),
+  )
+  if (pointCount === 0) {
+    return null
+  }
+
+  return {
+    header: "ngspice ascii raw",
+    numVariables: variables.length,
+    variableNames: variables.map((variable) => variable.name),
+    numPoints: pointCount,
+    dataType: "real",
+    data: variables.map((variable) => ({
+      name: variable.name,
+      type: variable.type,
+      values: variable.values.slice(0, pointCount),
+    })),
+  }
+}
+
+const runNativePspiceSimulation = (
+  spiceString: string,
+): { simulationResultCircuitJson: CircuitJson } => {
+  const tempDir = mkdtempSync(join(tmpdir(), "ngspice-pspice-"))
+  const netlistPath = join(tempDir, "test.cir")
+  const rawPath = join(tempDir, "out.raw")
+  const logPath = join(tempDir, "out.log")
+
+  try {
+    writeFileSync(join(tempDir, ".spiceinit"), "set ngbehavior=psa\n")
+    writeFileSync(join(tempDir, "modelcard.CMOS90"), "\n")
+    writeFileSync(netlistPath, spiceString)
+
+    const result = spawnSync(
+      "ngspice",
+      ["-b", "-r", "out.raw", "-o", "out.log", "test.cir"],
+      {
+        cwd: tempDir,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          SPICE_ASCIIRAWFILE: "1",
+        },
+        timeout: 120_000,
+      },
+    )
+
+    const log = existsSync(logPath) ? readFileSync(logPath, "utf8") : ""
+    const raw = existsSync(rawPath) ? readFileSync(rawPath, "utf8") : ""
+    const parsedResult = raw ? parseNgspiceAsciiRaw(raw) : null
+
+    if (!parsedResult) {
+      const details = [result.stderr, result.stdout, log]
+        .filter(Boolean)
+        .join("\n")
+        .trim()
+      throw new Error(
+        details
+          ? `Native ngspice PSPICE simulation failed:\n${details}`
+          : "Native ngspice PSPICE simulation failed without producing raw output",
+      )
+    }
+
+    const graphs = eecircuitResultToVGraphs(parsedResult, spiceString)
+    return {
+      simulationResultCircuitJson: voltageGraphsToCircuitJson(
+        graphs,
+        spiceString,
+      ),
+    }
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true })
+  }
+}
+
 const configureNgBehavior = (
   simulation: Simulation,
   pspiceCompatibility: boolean,
@@ -235,6 +382,10 @@ const simulate = async (
   spiceString: string,
   options: ResolvedNgspiceSpiceEngineOptions,
 ): Promise<{ simulationResultCircuitJson: CircuitJson }> => {
+  if (options.pspiceCompatibility) {
+    return runNativePspiceSimulation(spiceString)
+  }
+
   const simulation = await getSimulation()
   simulation.setNetList(spiceString)
   configureNgBehavior(simulation, options.pspiceCompatibility)
