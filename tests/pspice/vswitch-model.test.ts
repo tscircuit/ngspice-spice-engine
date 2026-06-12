@@ -1,35 +1,19 @@
 import { expect, test } from "bun:test"
-import {
-  expectPspiceFixtureToReportError,
-  expectPspiceFixtureToRun,
-} from "./pspice-fixture-utils"
+import { expectPspiceFixtureToReportError } from "./pspice-fixture-utils"
 
-test("runs PSPICE VSWITCH model syntax only with compat mode", () => {
-  const compat = expectPspiceFixtureToRun("vswitch-model.cir")
+test("reports PSPICE VSWITCH model syntax failure with and without compat mode", () => {
+  const compat = expectPspiceFixtureToReportError("vswitch-model.cir")
   const regular = expectPspiceFixtureToReportError("vswitch-model.cir", {
     withoutPspiceCompat: true,
   })
 
-  expect(compat).toMatchInlineSnapshot(`
-    {
-      "graphCount": 1,
-      "graphs": [
-        {
-          "endTimeMs": 0.019999999999999997,
-          "firstVoltages": [
-            4.9504950495049505,
-            4.9504950495049505,
-            4.9504950495049505,
-            4.9504950495049505,
-            4.9504950495049505,
-          ],
-          "name": "out",
-          "pointCount": 21,
-          "startTimeMs": 0,
-          "timePerStep": 0.001,
-        },
-      ],
-    }
+  expect(compat.stderr).toMatchInlineSnapshot(`
+    "Error on line 4 or its substitute:
+      as1 %gd(ctrl 0) %gd(src out) aswmod
+     unknown device type - error 
+        Simulation interrupted due to error!
+
+    Error: circuit not parsed."
   `)
   expect(regular.stderr).toMatchInlineSnapshot(`
     "warning, model type mismatch in line

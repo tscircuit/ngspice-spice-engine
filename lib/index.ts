@@ -45,7 +45,7 @@ const extractRequestedPlots = (
   spiceString: string,
 ): Map<string, string> | null => {
   const match = spiceString.match(/\.print\s+tran\s+(.*)/i)
-  if (!match?.[1]) {
+  if (!match || !match[1]) {
     return null
   }
 
@@ -83,7 +83,7 @@ export const eecircuitResultToVGraphs = (
   result: ResultType,
   spiceString: string,
 ): VoltageGraph[] => {
-  if (!result?.data || result.dataType !== "real") {
+  if (!result || !result.data || result.dataType !== "real") {
     return []
   }
 
@@ -199,98 +199,6 @@ const voltageGraphsToCircuitJson = (
   }))
 }
 
-const splitFunctionArguments = (input: string): string[] => {
-  const args: string[] = []
-  let startIndex = 0
-  let parenDepth = 0
-  let braceDepth = 0
-
-  for (let index = 0; index < input.length; index++) {
-    const char = input[index]
-    if (char === "(") parenDepth++
-    else if (char === ")") parenDepth--
-    else if (char === "{") braceDepth++
-    else if (char === "}") braceDepth--
-    else if (char === "," && parenDepth === 0 && braceDepth === 0) {
-      args.push(input.slice(startIndex, index))
-      startIndex = index + 1
-    }
-  }
-
-  args.push(input.slice(startIndex))
-  return args
-}
-
-const convertPspiceIfFunctions = (input: string): string => {
-  let output = ""
-  let index = 0
-
-  while (index < input.length) {
-    const ifMatch = input.slice(index).match(/^if\s*\(/i)
-    if (!ifMatch) {
-      output += input[index]
-      index++
-      continue
-    }
-
-    const openParenIndex = index + ifMatch[0].length - 1
-    let depth = 0
-    let closeParenIndex = -1
-    for (
-      let scanIndex = openParenIndex;
-      scanIndex < input.length;
-      scanIndex++
-    ) {
-      const char = input[scanIndex]
-      if (char === "(") depth++
-      else if (char === ")") {
-        depth--
-        if (depth === 0) {
-          closeParenIndex = scanIndex
-          break
-        }
-      }
-    }
-
-    if (closeParenIndex === -1) {
-      output += input.slice(index)
-      break
-    }
-
-    const innerExpression = convertPspiceIfFunctions(
-      input.slice(openParenIndex + 1, closeParenIndex),
-    )
-    const args = splitFunctionArguments(innerExpression)
-    if (args.length !== 3) {
-      output += input.slice(index, closeParenIndex + 1)
-    } else {
-      output += `((${args[0]!.trim()}) ? (${args[1]!.trim()}) : (${args[2]!.trim()}))`
-    }
-    index = closeParenIndex + 1
-  }
-
-  return output
-}
-
-const preprocessPspiceForEmbeddedNgspice = (spiceString: string): string => {
-  let processed = spiceString
-    .replace(/\bif\s*\r?\n\+\s*\(/gi, "if(")
-    .replace(/\.MODEL(\s+\S+\s+)VSWITCH\b/gi, ".MODEL$1SW")
-    .replace(/\b(VON|VOFF)\s*=\s*[^\s)]+/gi, "")
-    .replace(
-      /\b(RON|ROFF)\s*=\s*([^\s)]+)/gi,
-      (_match, key: string, value: string) =>
-        `${key}=${value.replace(/V$/i, "")}`,
-    )
-    .replace(/\bTC\s*=\s*([^\s,]+)\s*,\s*([^\s)]+)/gi, "TC1=$1 TC2=$2")
-
-  processed = convertPspiceIfFunctions(processed)
-  return processed
-    .replace(/\s&\s/g, " && ")
-    .replace(/\s\|\s/g, " || ")
-    .replace(/\s\^\s/g, " != ")
-}
-
 const configureNgBehavior = (
   simulation: Simulation,
   pspiceCompatibility: boolean,
@@ -327,13 +235,9 @@ const simulate = async (
   spiceString: string,
   options: ResolvedNgspiceSpiceEngineOptions,
 ): Promise<{ simulationResultCircuitJson: CircuitJson }> => {
-  const simulationSpiceString = options.pspiceCompatibility
-    ? preprocessPspiceForEmbeddedNgspice(spiceString)
-    : spiceString
-
   const simulation = await getSimulation()
-  simulation.setNetList(simulationSpiceString)
-  configureNgBehavior(simulation, false)
+  simulation.setNetList(spiceString)
+  configureNgBehavior(simulation, options.pspiceCompatibility)
 
   let result: ResultType | null
   try {
