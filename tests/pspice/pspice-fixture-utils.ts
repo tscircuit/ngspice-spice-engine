@@ -21,7 +21,7 @@ export interface PspiceFixtureRun {
 
 export const runPspiceFixture = (
   fixtureName: string,
-  options?: { withoutPspiceCompat?: boolean },
+  options?: { allowNativeNgspice?: boolean; withoutPspiceCompat?: boolean },
 ): PspiceFixtureRun => {
   const args = [
     join(import.meta.dir, "run-pspice-fixture.ts"),
@@ -35,6 +35,12 @@ export const runPspiceFixture = (
   const result = spawnSync(process.execPath, args, {
     cwd: join(import.meta.dir, "../.."),
     encoding: "utf8",
+    env: options?.allowNativeNgspice
+      ? process.env
+      : {
+          ...process.env,
+          PATH: "",
+        },
     timeout: 10_000,
   })
 
@@ -52,7 +58,7 @@ export const runPspiceFixture = (
 
 export const expectPspiceFixtureToRun = (
   fixtureName: string,
-  options?: { withoutPspiceCompat?: boolean },
+  options?: { allowNativeNgspice?: boolean; withoutPspiceCompat?: boolean },
 ) => {
   const run = runPspiceFixture(fixtureName, options)
 
@@ -66,7 +72,7 @@ export const expectPspiceFixtureToRun = (
 
 export const expectPspiceFixtureToReportError = (
   fixtureName: string,
-  options?: { withoutPspiceCompat?: boolean },
+  options?: { allowNativeNgspice?: boolean; withoutPspiceCompat?: boolean },
 ) => {
   const run = runPspiceFixture(fixtureName, options)
 
