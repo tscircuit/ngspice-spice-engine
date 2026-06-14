@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import type { ResultType } from "eecircuit-engine"
+import type { ResultType } from "@tscircuit/eecircuit-engine"
 import { eecircuitResultToVGraphs } from "../lib"
 
 describe("eecircuitResultToVGraphs", () => {

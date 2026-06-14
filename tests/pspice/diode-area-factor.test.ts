@@ -1,16 +1,10 @@
 import { expect, test } from "bun:test"
-import {
-  expectPspiceFixtureToReportError,
-  expectPspiceFixtureToRun,
-} from "./pspice-fixture-utils"
+import { expectPspiceFixtureToRun } from "./pspice-fixture-utils"
 
-test("runs PSPICE diode area factor syntax only with compat mode", () => {
-  const compat = expectPspiceFixtureToRun("diode-area-factor.cir")
-  const regular = expectPspiceFixtureToReportError("diode-area-factor.cir", {
-    withoutPspiceCompat: true,
-  })
+test("runs PSPICE diode area factor syntax", () => {
+  const output = expectPspiceFixtureToRun("diode-area-factor.cir")
 
-  expect(compat).toMatchInlineSnapshot(`
+  expect(output).toMatchInlineSnapshot(`
     {
       "graphCount": 1,
       "graphs": [
@@ -30,13 +24,5 @@ test("runs PSPICE diode area factor syntax only with compat mode", () => {
         },
       ],
     }
-  `)
-  expect(regular.stderr).toMatchInlineSnapshot(`
-    "Error on line 4 or its substitute:
-      d1 in out dmod 2
-    could not find a valid modelname
-        Simulation interrupted due to error!
-
-    Error: circuit not parsed."
   `)
 })

@@ -1,16 +1,10 @@
 import { expect, test } from "bun:test"
-import {
-  expectPspiceFixtureToReportError,
-  expectPspiceFixtureToRun,
-} from "./pspice-fixture-utils"
+import { expectPspiceFixtureToRun } from "./pspice-fixture-utils"
 
-test("runs PSPICE comma-separated resistor TC syntax only with compat mode", () => {
-  const compat = expectPspiceFixtureToRun("resistor-tc.cir")
-  const regular = expectPspiceFixtureToReportError("resistor-tc.cir", {
-    withoutPspiceCompat: true,
-  })
+test("runs PSPICE comma-separated resistor TC syntax", () => {
+  const output = expectPspiceFixtureToRun("resistor-tc.cir")
 
-  expect(compat).toMatchInlineSnapshot(`
+  expect(output).toMatchInlineSnapshot(`
     {
       "graphCount": 1,
       "graphs": [
@@ -30,13 +24,5 @@ test("runs PSPICE comma-separated resistor TC syntax only with compat mode", () 
         },
       ],
     }
-  `)
-  expect(regular.stderr).toMatchInlineSnapshot(`
-    "Error on line 4 or its substitute:
-      r1 in out 1k tc=0.01,0.001
-      unknown parameter (0.001) 
-        Simulation interrupted due to error!
-
-    Error: circuit not parsed."
   `)
 })

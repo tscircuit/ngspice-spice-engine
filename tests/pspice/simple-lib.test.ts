@@ -1,16 +1,10 @@
 import { expect, test } from "bun:test"
-import {
-  expectPspiceFixtureToReportError,
-  expectPspiceFixtureToRun,
-} from "./pspice-fixture-utils"
+import { expectPspiceFixtureToRun } from "./pspice-fixture-utils"
 
-test("runs PSPICE simple .lib syntax only with compat mode", () => {
-  const compat = expectPspiceFixtureToRun("simple-lib.cir")
-  const regular = expectPspiceFixtureToReportError("simple-lib.cir", {
-    withoutPspiceCompat: true,
-  })
+test("runs PSPICE simple .lib syntax", () => {
+  const output = expectPspiceFixtureToRun("simple-lib.cir")
 
-  expect(compat).toMatchInlineSnapshot(`
+  expect(output).toMatchInlineSnapshot(`
     {
       "graphCount": 1,
       "graphs": [
@@ -30,13 +24,5 @@ test("runs PSPICE simple .lib syntax only with compat mode", () => {
         },
       ],
     }
-  `)
-  expect(regular.stderr).toMatchInlineSnapshot(`
-    "Error on line 2 or its substitute:
-      .lib modelcard.cmos90
-     unimplemented dot command '.lib'
-        Simulation interrupted due to error!
-
-    Error: circuit not parsed."
   `)
 })

@@ -1,6 +1,6 @@
 import type { SpiceEngine } from "@tscircuit/props"
 import type { CircuitJson, SimulationTransientVoltageGraph } from "circuit-json"
-import type { ResultType, Simulation } from "eecircuit-engine"
+import type { ResultType, Simulation } from "@tscircuit/eecircuit-engine"
 import { linearInterpolate } from "./linear-interpolate"
 import { parseTranParams } from "./parse-tran-params"
 
@@ -10,21 +10,11 @@ interface VoltageGraph {
   voltage: number[]
 }
 
-export interface NgspiceSpiceEngineOptions {
-  pspiceCompatibility?: boolean
-}
-
-interface ResolvedNgspiceSpiceEngineOptions {
-  pspiceCompatibility: boolean
-}
-
-interface SimulationWithCommandList {
-  commandList?: string[]
-}
-
 const ensureSimulation = async (): Promise<Simulation> => {
-  const { Simulation: SimulationCtor } = await import("eecircuit-engine")
-  const instance = new SimulationCtor()
+  const { Simulation: SimulationCtor } = await import(
+    "@tscircuit/eecircuit-engine"
+  )
+  const instance = new SimulationCtor({ ngBehavior: "psa" })
   await instance.start()
   return instance
 }
@@ -165,7 +155,7 @@ export const eecircuitResultToVGraphs = (
         { length: numSteps + 1 },
         (_, i) => tstart + i * tstep,
       )
-      // All graphs from eecircuit-engine share the same time vector.
+      // All graphs from @tscircuit/eecircuit-engine share the same time vector.
       const oldTimeValues = graphs[0]!.time
       return graphs.map((graph) => ({
         ...graph,
@@ -199,45 +189,11 @@ const voltageGraphsToCircuitJson = (
   }))
 }
 
-const configureNgBehavior = (
-  simulation: Simulation,
-  pspiceCompatibility: boolean,
-) => {
-  const simulationWithCommandList =
-    simulation as unknown as SimulationWithCommandList
-  const commandList = simulationWithCommandList.commandList
-
-  if (!Array.isArray(commandList)) {
-    if (pspiceCompatibility) {
-      throw new Error(
-        "Unable to enable PSPICE compatibility: eecircuit-engine commandList is not accessible",
-      )
-    }
-    return
-  }
-
-  const ngBehaviorCommand = pspiceCompatibility
-    ? "set ngbehavior=psa"
-    : "unset ngbehavior"
-  const sourceCommandIndex = commandList.findIndex((command) =>
-    /^\s*source\s+test\.cir\s*$/i.test(command),
-  )
-
-  if (sourceCommandIndex === -1) {
-    commandList.unshift(ngBehaviorCommand)
-    return
-  }
-
-  commandList.splice(sourceCommandIndex, 0, ngBehaviorCommand)
-}
-
 const simulate = async (
   spiceString: string,
-  options: ResolvedNgspiceSpiceEngineOptions,
 ): Promise<{ simulationResultCircuitJson: CircuitJson }> => {
   const simulation = await getSimulation()
   simulation.setNetList(spiceString)
-  configureNgBehavior(simulation, options.pspiceCompatibility)
 
   let result: ResultType | null
   try {
@@ -261,15 +217,9 @@ const simulate = async (
   }
 }
 
-export const createNgspiceSpiceEngine = async (
-  options: NgspiceSpiceEngineOptions = {},
-): Promise<SpiceEngine> => {
-  const resolvedOptions = {
-    pspiceCompatibility: options.pspiceCompatibility ?? false,
-  }
-
+export const createNgspiceSpiceEngine = async (): Promise<SpiceEngine> => {
   return {
-    simulate: (spiceString: string) => simulate(spiceString, resolvedOptions),
+    simulate: (spiceString: string) => simulate(spiceString),
   }
 }
 

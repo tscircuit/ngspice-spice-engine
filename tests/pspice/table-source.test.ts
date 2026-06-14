@@ -1,26 +1,28 @@
 import { expect, test } from "bun:test"
-import { expectPspiceFixtureToReportError } from "./pspice-fixture-utils"
+import { expectPspiceFixtureToRun } from "./pspice-fixture-utils"
 
-test("reports PSPICE TABLE source syntax failure with and without compat mode", () => {
-  const compat = expectPspiceFixtureToReportError("table-source.cir")
-  const regular = expectPspiceFixtureToReportError("table-source.cir", {
-    withoutPspiceCompat: true,
-  })
+test("runs PSPICE TABLE source syntax", () => {
+  const output = expectPspiceFixtureToRun("table-source.cir")
 
-  expect(compat.stderr).toMatchInlineSnapshot(`
-    "Error on line 3 or its substitute:
-      ae1 %v(e1_int2) %v(e1_int1) xfer_e1
-     unknown device type - error 
-        Simulation interrupted due to error!
-
-    Error: circuit not parsed."
-  `)
-  expect(regular.stderr).toMatchInlineSnapshot(`
-    "Error on line 3 or its substitute:
-      ae1 %v(e1_int2) %v(e1_int1) xfer_e1
-     unknown device type - error 
-        Simulation interrupted due to error!
-
-    Error: circuit not parsed."
+  expect(output).toMatchInlineSnapshot(`
+    {
+      "graphCount": 1,
+      "graphs": [
+        {
+          "endTimeMs": 0.019999999999999997,
+          "firstVoltages": [
+            0.05000000000000002,
+            2.9749999999999996,
+            2.9749999999999996,
+            2.9749999999999996,
+            2.9749999999999996,
+          ],
+          "name": "out",
+          "pointCount": 21,
+          "startTimeMs": 0,
+          "timePerStep": 0.001,
+        },
+      ],
+    }
   `)
 })

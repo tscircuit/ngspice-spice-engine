@@ -2,16 +2,13 @@ import { readFileSync } from "node:fs"
 import { createNgspiceSpiceEngine } from "../../lib"
 
 const fixturePath = process.argv[2]
-const withoutPspiceCompat = process.argv.includes("--without-pspice-compat")
 
 if (!fixturePath) {
   console.error("Missing fixture path")
   process.exit(64)
 }
 
-const spiceEngine = await createNgspiceSpiceEngine({
-  pspiceCompatibility: !withoutPspiceCompat,
-})
+const spiceEngine = await createNgspiceSpiceEngine()
 const spiceString = readFileSync(fixturePath, "utf8")
 const result = await spiceEngine.simulate(spiceString)
 
