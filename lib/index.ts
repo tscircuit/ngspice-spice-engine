@@ -1,6 +1,6 @@
+import { type ResultType, Simulation } from "@tscircuit/eecircuit-engine"
 import type { SpiceEngine } from "@tscircuit/props"
 import type { CircuitJson, SimulationTransientVoltageGraph } from "circuit-json"
-import type { ResultType, Simulation } from "@tscircuit/eecircuit-engine"
 import { linearInterpolate } from "./linear-interpolate"
 import { parseTranParams } from "./parse-tran-params"
 
@@ -11,10 +11,7 @@ interface VoltageGraph {
 }
 
 const ensureSimulation = async (): Promise<Simulation> => {
-  const { Simulation: SimulationCtor } = await import(
-    "@tscircuit/eecircuit-engine"
-  )
-  const instance = new SimulationCtor({ ngBehavior: "psa" })
+  const instance = new Simulation({ ngBehavior: "psa" })
   await instance.start()
   return instance
 }
