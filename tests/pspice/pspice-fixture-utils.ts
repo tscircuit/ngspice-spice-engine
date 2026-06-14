@@ -43,9 +43,7 @@ export const runPspiceFixture = (fixtureName: string): PspiceFixtureRun => {
   }
 }
 
-export const expectPspiceFixtureToRun = (
-  fixtureName: string,
-) => {
+export const expectPspiceFixtureToRun = (fixtureName: string) => {
   const run = runPspiceFixture(fixtureName)
 
   expect(run.status).toBe(0)
@@ -56,9 +54,7 @@ export const expectPspiceFixtureToRun = (
   return run.output!
 }
 
-export const expectPspiceFixtureToReportError = (
-  fixtureName: string,
-) => {
+export const expectPspiceFixtureToReportError = (fixtureName: string) => {
   const run = runPspiceFixture(fixtureName)
 
   expect(run.status).toBe(0)
