@@ -54,4 +54,68 @@ Vsimulation_voltage_source_0 VP_IN1 0 SIN(0 5 40 0 0 0)
     },
     { timeout: 15_000 },
   )
+
+  test(
+    "should name simulation graphs from tscircuit probe metadata",
+    async () => {
+      const spiceEngine = await createNgspiceSpiceEngine()
+
+      const spiceString = `
+* Probe metadata
+RR1 N5 0 82.5
+Vsimulation_voltage_source_0 N5 0 DC 3.3
+* tscircuit_probe {"simulation_voltage_probe_id":"simulation_voltage_probe_0","name":"VOUT_PROBE","spice_vector":"V(N5)","source_node_name":"N5"}
+.PRINT TRAN V(N5)
+.tran 0.0001 0.0002 UIC
+.END
+`
+
+      const { simulationResultCircuitJson } =
+        await spiceEngine.simulate(spiceString)
+
+      expect(simulationResultCircuitJson).toHaveLength(1)
+      expect(simulationResultCircuitJson[0]).toMatchObject({
+        simulation_transient_voltage_graph_id:
+          "simulation_graph_simulation_voltage_probe_0",
+        name: "VOUT_PROBE",
+        source_probe_id: "simulation_voltage_probe_0",
+        source_probe_name: "VOUT_PROBE",
+        source_node_name: "N5",
+      })
+    },
+    { timeout: 15_000 },
+  )
+
+  test(
+    "should preserve differential probe metadata in simulation graphs",
+    async () => {
+      const spiceEngine = await createNgspiceSpiceEngine()
+
+      const spiceString = `
+* Differential probe metadata
+RR1 N7 N6 100
+Vsimulation_voltage_source_0 N7 0 DC 5
+Vsimulation_voltage_source_1 N6 0 DC 3
+* tscircuit_probe {"simulation_voltage_probe_id":"simulation_voltage_probe_1","name":"L1_PROBE","spice_vector":"V(N7,N6)","source_node_name":"N7","reference_node_name":"N6"}
+.PRINT TRAN V(N7,N6)
+.tran 0.0001 0.0002 UIC
+.END
+`
+
+      const { simulationResultCircuitJson } =
+        await spiceEngine.simulate(spiceString)
+
+      expect(simulationResultCircuitJson).toHaveLength(1)
+      expect(simulationResultCircuitJson[0]).toMatchObject({
+        simulation_transient_voltage_graph_id:
+          "simulation_graph_simulation_voltage_probe_1",
+        name: "L1_PROBE",
+        source_probe_id: "simulation_voltage_probe_1",
+        source_probe_name: "L1_PROBE",
+        source_node_name: "N7",
+        reference_node_name: "N6",
+      })
+    },
+    { timeout: 15_000 },
+  )
 })

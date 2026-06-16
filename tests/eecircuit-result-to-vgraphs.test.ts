@@ -43,6 +43,47 @@ describe("eecircuitResultToVGraphs", () => {
     expect(graphs[0]).toMatchObject({ netName: "out" })
   })
 
+  test("uses tscircuit probe metadata to name requested voltage graphs", () => {
+    const result: ResultType = {
+      header: "test",
+      numVariables: 2,
+      variableNames: ["time", "v(n5)"],
+      numPoints: 3,
+      dataType: "real",
+      data: [
+        {
+          name: "time",
+          type: "time",
+          values: [0, 1, 2],
+        },
+        {
+          type: "voltage",
+          name: "v(n5)",
+          values: [3.2, 3.3, 3.4],
+        },
+      ],
+    }
+
+    const graphs = eecircuitResultToVGraphs(
+      result,
+      `
+* tscircuit_probe {"simulation_voltage_probe_id":"simulation_voltage_probe_0","name":"VOUT_PROBE","spice_vector":"V(N5)","source_node_name":"N5"}
+.PRINT TRAN V(N5)
+`,
+    )
+
+    expect(graphs).toHaveLength(1)
+    expect(graphs[0]).toMatchObject({
+      netName: "VOUT_PROBE",
+      probeMetadata: {
+        simulation_voltage_probe_id: "simulation_voltage_probe_0",
+        name: "VOUT_PROBE",
+        spice_vector: "V(N5)",
+        source_node_name: "N5",
+      },
+    })
+  })
+
   test("preserves casing from spice string over engine's casing", () => {
     // Create a result where the engine returns a different casing
     // than what we'll request.
@@ -97,6 +138,48 @@ describe("eecircuitResultToVGraphs", () => {
 
     expect(graphs).toHaveLength(1)
     expect(graphs[0]).toMatchObject({ netName: "VP_OUT-N1" })
+  })
+
+  test("uses tscircuit probe metadata for differential voltage graphs", () => {
+    const result: ResultType = {
+      header: "test",
+      numVariables: 2,
+      variableNames: ["time", "v(n7,n6)"],
+      numPoints: 3,
+      dataType: "real",
+      data: [
+        {
+          name: "time",
+          type: "time",
+          values: [0, 1, 2],
+        },
+        {
+          type: "voltage",
+          name: "v(n7,n6)",
+          values: [0.1, 0.2, 0.3],
+        },
+      ],
+    }
+
+    const graphs = eecircuitResultToVGraphs(
+      result,
+      `
+* tscircuit_probe {"simulation_voltage_probe_id":"simulation_voltage_probe_1","name":"L1_PROBE","spice_vector":"V(N7,N6)","source_node_name":"N7","reference_node_name":"N6"}
+.PRINT TRAN V(N7,N6)
+`,
+    )
+
+    expect(graphs).toHaveLength(1)
+    expect(graphs[0]).toMatchObject({
+      netName: "L1_PROBE",
+      probeMetadata: {
+        simulation_voltage_probe_id: "simulation_voltage_probe_1",
+        name: "L1_PROBE",
+        spice_vector: "V(N7,N6)",
+        source_node_name: "N7",
+        reference_node_name: "N6",
+      },
+    })
   })
 
   test("handles both normal and differential voltage plots", () => {
