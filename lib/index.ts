@@ -8,6 +8,15 @@ interface VoltageGraph {
   netName: string
   time: number[]
   voltage: number[]
+  probeMetadata?: ProbeMetadata
+}
+
+interface ProbeMetadata {
+  simulation_voltage_probe_id: string
+  name?: string
+  spice_vector: string
+  source_node_name: string
+  reference_node_name?: string
 }
 
 const ensureSimulation = async (): Promise<Simulation> => {
@@ -56,6 +65,46 @@ const extractRequestedPlots = (
   return plotMap
 }
 
+const normalizeSpiceVector = (value: string): string =>
+  value.toLowerCase().replace(/\s/g, "")
+
+const extractProbeMetadata = (
+  spiceString: string,
+): Map<string, ProbeMetadata> => {
+  const metadata = new Map<string, ProbeMetadata>()
+
+  for (const line of spiceString.split(/\r?\n/)) {
+    const match = line.match(/^\s*\*\s*tscircuit_probe\s+(.+)\s*$/)
+    if (!match?.[1]) continue
+
+    try {
+      const parsed = JSON.parse(match[1]) as Partial<ProbeMetadata>
+      if (
+        typeof parsed.simulation_voltage_probe_id !== "string" ||
+        typeof parsed.spice_vector !== "string" ||
+        typeof parsed.source_node_name !== "string"
+      ) {
+        continue
+      }
+
+      metadata.set(normalizeSpiceVector(parsed.spice_vector), {
+        simulation_voltage_probe_id: parsed.simulation_voltage_probe_id,
+        name: typeof parsed.name === "string" ? parsed.name : undefined,
+        spice_vector: parsed.spice_vector,
+        source_node_name: parsed.source_node_name,
+        reference_node_name:
+          typeof parsed.reference_node_name === "string"
+            ? parsed.reference_node_name
+            : undefined,
+      })
+    } catch {
+      continue
+    }
+  }
+
+  return metadata
+}
+
 const getNetName = (rawName: string): string => {
   const diffMatch = rawName.match(/^v\(([^,]+),\s*([^)]+)\)$/i)
   if (diffMatch?.[1] && diffMatch?.[2]) {
@@ -93,14 +142,19 @@ export const eecircuitResultToVGraphs = (
   }
 
   const requestedPlots = extractRequestedPlots(spiceString)
+  const probeMetadata = extractProbeMetadata(spiceString)
 
   if (!requestedPlots) {
     // If no plots are requested, return all available voltage plots
-    return voltageDataItems.map((item) => ({
-      netName: getNetName(item.name),
-      time: timeValues,
-      voltage: item.values as number[],
-    }))
+    return voltageDataItems.map((item) => {
+      const metadata = probeMetadata.get(normalizeSpiceVector(item.name))
+      return {
+        netName: metadata?.name ?? getNetName(item.name),
+        time: timeValues,
+        voltage: item.values as number[],
+        probeMetadata: metadata,
+      }
+    })
   }
 
   const graphs: VoltageGraph[] = []
@@ -130,10 +184,12 @@ export const eecircuitResultToVGraphs = (
     }
 
     if (voltage) {
+      const metadata = probeMetadata.get(lowerCaseToken)
       graphs.push({
-        netName: getNetName(originalToken),
+        netName: metadata?.name ?? getNetName(originalToken),
         time: timeValues,
         voltage,
+        probeMetadata: metadata,
       })
     }
   }
@@ -176,17 +232,28 @@ const voltageGraphsToCircuitJson = (
 ): SimulationTransientVoltageGraph[] => {
   const tranParams = parseTranParams(spiceString)
 
-  return graphs.map((graph) => ({
-    type: "simulation_transient_voltage_graph",
-    simulation_experiment_id: "placeholder_simulation_experiment_id",
-    simulation_transient_voltage_graph_id: `simulation_graph_${graph.netName}`,
-    name: graph.netName,
-    voltage_levels: graph.voltage,
-    timestamps_ms: graph.time.map((timePoint) => timePoint * 1000),
-    start_time_ms: (tranParams?.tstart ?? 0) * 1000,
-    time_per_step: (tranParams?.tstep ?? 0) * 1000,
-    end_time_ms: (tranParams?.tstop ?? 0) * 1000,
-  }))
+  return graphs.map((graph, index) => {
+    const graphIdSource =
+      graph.probeMetadata?.simulation_voltage_probe_id ??
+      `${index}_${graph.netName}`
+    const graphElement = {
+      type: "simulation_transient_voltage_graph",
+      simulation_experiment_id: "placeholder_simulation_experiment_id",
+      simulation_transient_voltage_graph_id: `simulation_graph_${graphIdSource}`,
+      name: graph.netName,
+      voltage_levels: graph.voltage,
+      timestamps_ms: graph.time.map((timePoint) => timePoint * 1000),
+      start_time_ms: (tranParams?.tstart ?? 0) * 1000,
+      time_per_step: (tranParams?.tstep ?? 0) * 1000,
+      end_time_ms: (tranParams?.tstop ?? 0) * 1000,
+      source_probe_id: graph.probeMetadata?.simulation_voltage_probe_id,
+      source_probe_name: graph.probeMetadata?.name,
+      source_node_name: graph.probeMetadata?.source_node_name,
+      reference_node_name: graph.probeMetadata?.reference_node_name,
+    }
+
+    return graphElement as SimulationTransientVoltageGraph
+  })
 }
 
 const simulate = async (
