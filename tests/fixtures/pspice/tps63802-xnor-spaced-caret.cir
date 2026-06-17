@@ -1,0 +1,14 @@
+* TPS63802 exact PSPICE XNOR VALUE syntax with spaced caret operator
+.SUBCKT XNOR2_BASIC_GEN A B Y PARAMS: VDD=1 VSS=0 VTHRESH=0.5
+E_ABMGATE  YINT 0 VALUE {{IF(V(A) > {VTHRESH}  ^
++ V(B) > {VTHRESH},{VSS},{VDD})}}
+RINT YINT Y 1
+CINT Y 0 1n
+.ENDS XNOR2_BASIC_GEN
+
+V1 a 0 PULSE(0 1 0 1u 1u 5u 10u)
+V2 b 0 1
+X1 a b out XNOR2_BASIC_GEN PARAMS: VDD=1 VSS=0 VTHRESH=0.5
+.print tran v(out)
+.tran 1u 20u
+.end
