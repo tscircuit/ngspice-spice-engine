@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { normalizePspiceCompatibility } from "../../lib"
+import { normalizePspiceCompatibility } from "../../lib/normalize-pspice-compatibility"
 
 test("normalizes PSPICE resistor TC pairs on resistor lines", () => {
   const spice = [
