@@ -1,13 +1,13 @@
 import { expect, test } from "bun:test"
-import { normalizePspiceCompatibility } from "../../lib/normalize-pspice-compatibility"
+import { rewritePspiceCompatibilitySyntax } from "../../lib/rewrite-pspice-compatibility-syntax"
 
-test("normalizes PSPICE resistor TC pairs on resistor lines", () => {
+test("rewrites PSPICE resistor TC pairs on resistor lines", () => {
   const spice = [
     "R_U_EA_R1         COMP U_EA_N04642  350k TC=0,0",
     "C1 out 0 1u TC=0,0",
   ].join("\n")
 
-  expect(normalizePspiceCompatibility(spice)).toBe(
+  expect(rewritePspiceCompatibilitySyntax(spice)).toBe(
     [
       "R_U_EA_R1         COMP U_EA_N04642  350k TC1=0 TC2=0",
       "C1 out 0 1u TC=0,0",
@@ -15,7 +15,7 @@ test("normalizes PSPICE resistor TC pairs on resistor lines", () => {
   )
 })
 
-test("normalizes only PSPICE VALUE boolean spaced caret operators", () => {
+test("rewrites only PSPICE VALUE boolean spaced caret operators", () => {
   const spice = [
     "E_ABMGATE  YINT 0 VALUE {{IF(V(A) > {VTHRESH}  ^",
     "+ V(B) > {VTHRESH},{VSS},{VDD})}}",
@@ -27,7 +27,7 @@ test("normalizes only PSPICE VALUE boolean spaced caret operators", () => {
     "R1 in out 1k",
   ].join("\n")
 
-  expect(normalizePspiceCompatibility(spice)).toBe(
+  expect(rewritePspiceCompatibilitySyntax(spice)).toBe(
     [
       "E_ABMGATE  YINT 0 VALUE {{IF(V(A) > {VTHRESH}  !=",
       "+ V(B) > {VTHRESH},{VSS},{VDD})}}",

@@ -1,6 +1,6 @@
 const pspiceNumberToken = String.raw`([+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?)`
 
-const normalizePspiceResistorTc = (spiceString: string): string =>
+const rewritePspiceResistorTcPairs = (spiceString: string): string =>
   spiceString
     .split(/\r?\n/)
     .map((line) => {
@@ -41,7 +41,7 @@ const isPspiceBooleanCaret = (
 
 // Handles PSPICE boolean-caret forms in behavioral VALUE blocks.
 // This is intentionally not a general PSPICE expression parser.
-const normalizePspiceValueBlockCarets = (spiceString: string): string => {
+const rewritePspiceValueBooleanCarets = (spiceString: string): string => {
   let result = ""
   let cursor = 0
   const valueStartPattern = /\bVALUE\s*\{/gi
@@ -86,5 +86,5 @@ const normalizePspiceValueBlockCarets = (spiceString: string): string => {
   return result + spiceString.slice(cursor)
 }
 
-export const normalizePspiceCompatibility = (spiceString: string): string =>
-  normalizePspiceValueBlockCarets(normalizePspiceResistorTc(spiceString))
+export const rewritePspiceCompatibilitySyntax = (spiceString: string): string =>
+  rewritePspiceValueBooleanCarets(rewritePspiceResistorTcPairs(spiceString))

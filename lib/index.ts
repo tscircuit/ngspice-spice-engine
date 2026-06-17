@@ -2,8 +2,8 @@ import type { ResultType, Simulation } from "@tscircuit/eecircuit-engine"
 import type { SpiceEngine } from "@tscircuit/props"
 import type { CircuitJson, SimulationTransientVoltageGraph } from "circuit-json"
 import { linearInterpolate } from "./linear-interpolate"
-import { normalizePspiceCompatibility } from "./normalize-pspice-compatibility"
 import { parseTranParams } from "./parse-tran-params"
+import { rewritePspiceCompatibilitySyntax } from "./rewrite-pspice-compatibility-syntax"
 
 interface VoltageGraph {
   netName: string
@@ -259,7 +259,7 @@ const simulate = async (
   spiceString: string,
 ): Promise<{ simulationResultCircuitJson: CircuitJson }> => {
   const simulation = await getSimulation()
-  const simulationSpiceString = normalizePspiceCompatibility(spiceString)
+  const simulationSpiceString = rewritePspiceCompatibilitySyntax(spiceString)
   simulation.setNetList(simulationSpiceString)
 
   let result: ResultType | null
@@ -292,6 +292,6 @@ export const createNgspiceSpiceEngine = async (): Promise<SpiceEngine> => {
 
 export default createNgspiceSpiceEngine
 
-export { normalizePspiceCompatibility } from "./normalize-pspice-compatibility"
 export type { TranParams } from "./parse-tran-params"
+export { rewritePspiceCompatibilitySyntax } from "./rewrite-pspice-compatibility-syntax"
 export { parseTranParams }
