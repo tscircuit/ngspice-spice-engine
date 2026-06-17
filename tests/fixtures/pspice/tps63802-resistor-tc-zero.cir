@@ -1,0 +1,8 @@
+* TPS63802 exact PSPICE resistor TC zero syntax
+.temp 75
+V1 in 0 5
+R1 in out 350k TC=0,0
+C1 out 0 1u IC=0
+.print tran v(out)
+.tran 1u 20u
+.end

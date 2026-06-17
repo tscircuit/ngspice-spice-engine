@@ -1,8 +1,9 @@
+import type { ResultType, Simulation } from "@tscircuit/eecircuit-engine"
 import type { SpiceEngine } from "@tscircuit/props"
 import type { CircuitJson, SimulationTransientVoltageGraph } from "circuit-json"
-import type { ResultType, Simulation } from "@tscircuit/eecircuit-engine"
 import { linearInterpolate } from "./linear-interpolate"
 import { parseTranParams } from "./parse-tran-params"
+import { rewritePspiceCompatibilitySyntax } from "./rewrite-pspice-compatibility-syntax"
 
 interface VoltageGraph {
   netName: string
@@ -44,7 +45,7 @@ const extractRequestedPlots = (
   spiceString: string,
 ): Map<string, string> | null => {
   const match = spiceString.match(/\.print\s+tran\s+(.*)/i)
-  if (!match || !match[1]) {
+  if (!match?.[1]) {
     return null
   }
 
@@ -97,9 +98,7 @@ const extractProbeMetadata = (
             ? parsed.reference_node_name
             : undefined,
       })
-    } catch {
-      continue
-    }
+    } catch {}
   }
 
   return metadata
@@ -122,7 +121,7 @@ export const eecircuitResultToVGraphs = (
   result: ResultType,
   spiceString: string,
 ): VoltageGraph[] => {
-  if (!result || !result.data || result.dataType !== "real") {
+  if (!result?.data || result.dataType !== "real") {
     return []
   }
 
@@ -260,7 +259,8 @@ const simulate = async (
   spiceString: string,
 ): Promise<{ simulationResultCircuitJson: CircuitJson }> => {
   const simulation = await getSimulation()
-  simulation.setNetList(spiceString)
+  const simulationSpiceString = rewritePspiceCompatibilitySyntax(spiceString)
+  simulation.setNetList(simulationSpiceString)
 
   let result: ResultType | null
   try {
@@ -274,12 +274,12 @@ const simulate = async (
     return { simulationResultCircuitJson: [] }
   }
 
-  const graphs = eecircuitResultToVGraphs(result, spiceString)
+  const graphs = eecircuitResultToVGraphs(result, simulationSpiceString)
 
   return {
     simulationResultCircuitJson: voltageGraphsToCircuitJson(
       graphs,
-      spiceString,
+      simulationSpiceString,
     ),
   }
 }
@@ -293,4 +293,5 @@ export const createNgspiceSpiceEngine = async (): Promise<SpiceEngine> => {
 export default createNgspiceSpiceEngine
 
 export type { TranParams } from "./parse-tran-params"
+export { rewritePspiceCompatibilitySyntax } from "./rewrite-pspice-compatibility-syntax"
 export { parseTranParams }
