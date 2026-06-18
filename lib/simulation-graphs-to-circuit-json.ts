@@ -2,8 +2,8 @@ import type {
   SimulationTransientCurrentGraph,
   SimulationTransientVoltageGraph,
 } from "circuit-json"
-import type { SimulationGraph } from "./eecircuit-result-to-simulation-graphs"
 import { parseTranParams } from "./parse-tran-params"
+import type { SimulationGraph } from "./simulation-graph-types"
 
 export const simulationGraphsToCircuitJson = (
   graphs: SimulationGraph[],
