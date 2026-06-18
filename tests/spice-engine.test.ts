@@ -1,8 +1,131 @@
 import { describe, expect, test } from "bun:test"
-import type { SpiceEngine } from "@tscircuit/props"
 import { createNgspiceSpiceEngine } from "../lib"
 
 describe("ngspiceSpiceEngine", () => {
+  test(
+    "should emit voltage-only transient graph output",
+    async () => {
+      const spiceEngine = await createNgspiceSpiceEngine()
+
+      const spiceString = `
+V1 out 0 DC 3.3
+.PRINT TRAN V(out)
+.tran 0.001 0.002
+.END
+`
+
+      const { simulationResultCircuitJson } =
+        await spiceEngine.simulate(spiceString)
+
+      expect(simulationResultCircuitJson).toHaveLength(1)
+      expect(simulationResultCircuitJson[0]).toMatchObject({
+        type: "simulation_transient_voltage_graph",
+        simulation_transient_voltage_graph_id: "simulation_graph_0_out",
+        name: "out",
+        start_time_ms: 0,
+        time_per_step: 1,
+        end_time_ms: 2,
+      })
+      expect(
+        (simulationResultCircuitJson[0] as any).voltage_levels.length,
+      ).toBeGreaterThan(0)
+      expect((simulationResultCircuitJson[0] as any).current_levels).toBe(
+        undefined,
+      )
+    },
+    { timeout: 15_000 },
+  )
+
+  test(
+    "should emit current-only transient graph output",
+    async () => {
+      const spiceEngine = await createNgspiceSpiceEngine()
+
+      const spiceString = `
+V1 in 0 DC 1
+Vsense in out DC 0
+R1 out 0 100
+* tscircuit_current_probe {"simulation_current_probe_id":"simulation_current_probe_0","name":"I_R1","spice_vector":"I(Vsense)","source_component_id":"source_component_0","source_trace_id":"source_trace_0"}
+.PRINT TRAN I(Vsense)
+.tran 0.001 0.002
+.END
+`
+
+      const { simulationResultCircuitJson } =
+        await spiceEngine.simulate(spiceString)
+
+      expect(simulationResultCircuitJson).toHaveLength(1)
+      expect(simulationResultCircuitJson[0]).toMatchObject({
+        type: "simulation_transient_current_graph",
+        simulation_transient_current_graph_id:
+          "simulation_graph_simulation_current_probe_0",
+        name: "I_R1",
+        source_probe_id: "simulation_current_probe_0",
+        source_probe_name: "I_R1",
+        source_component_id: "source_component_0",
+        source_trace_id: "source_trace_0",
+        start_time_ms: 0,
+        time_per_step: 1,
+        end_time_ms: 2,
+      })
+      expect(
+        (simulationResultCircuitJson[0] as any).current_levels.length,
+      ).toBeGreaterThan(0)
+      expect((simulationResultCircuitJson[0] as any).voltage_levels).toBe(
+        undefined,
+      )
+    },
+    { timeout: 15_000 },
+  )
+
+  test(
+    "should emit mixed voltage and current transient graph output",
+    async () => {
+      const spiceEngine = await createNgspiceSpiceEngine()
+
+      const spiceString = `
+V1 in 0 DC 1
+Vsense in out DC 0
+R1 out 0 100
+* tscircuit_probe {"simulation_voltage_probe_id":"simulation_voltage_probe_0","name":"VOUT","spice_vector":"V(out)","source_node_name":"out"}
+* tscircuit_current_probe {"simulation_current_probe_id":"simulation_current_probe_0","name":"I_R1","spice_vector":"I(Vsense)"}
+.PRINT TRAN V(out) I(Vsense)
+.tran 0.001 0.002
+.END
+`
+
+      const { simulationResultCircuitJson } =
+        await spiceEngine.simulate(spiceString)
+
+      expect(simulationResultCircuitJson).toHaveLength(2)
+
+      const voltageGraph = simulationResultCircuitJson.find(
+        (graph) => graph.type === "simulation_transient_voltage_graph",
+      )
+      const currentGraph = simulationResultCircuitJson.find(
+        (graph) => graph.type === "simulation_transient_current_graph",
+      )
+
+      expect(voltageGraph).toMatchObject({
+        simulation_transient_voltage_graph_id:
+          "simulation_graph_simulation_voltage_probe_0",
+        name: "VOUT",
+      })
+      expect(currentGraph).toMatchObject({
+        simulation_transient_current_graph_id:
+          "simulation_graph_simulation_current_probe_0",
+        name: "I_R1",
+      })
+      expect((voltageGraph as any).voltage_levels.length).toBe(
+        (voltageGraph as any).timestamps_ms.length,
+      )
+      expect((currentGraph as any).current_levels.length).toBe(
+        (currentGraph as any).timestamps_ms.length,
+      )
+    },
+    { timeout: 15_000 },
+  )
+
   // NOTE: this is a longer running test as it runs a real simulation
   test(
     "should create and simulate a circuit with normal and differential plots",
