@@ -1,6 +1,7 @@
-import type { ResultType, Simulation } from "@tscircuit/eecircuit-engine"
 import type { SpiceEngine } from "@tscircuit/props"
 import type { CircuitJson } from "circuit-json"
+import type { ResultType, Simulation } from "./eecircuit-engine-types"
+import { importEecircuitEngine } from "./import-eecircuit-engine"
 import { parseTranParams } from "./parse-tran-params"
 import { rewritePspiceCompatibilitySyntax } from "./rewrite-pspice-compatibility-syntax"
 import {
@@ -9,9 +10,7 @@ import {
 } from "./simulation-graphs"
 
 const ensureSimulation = async (): Promise<Simulation> => {
-  const { Simulation: SimulationCtor } = await import(
-    "@tscircuit/eecircuit-engine"
-  )
+  const { Simulation: SimulationCtor } = await importEecircuitEngine()
   const instance = new SimulationCtor({ ngBehavior: "psa" })
   await instance.start()
   return instance
