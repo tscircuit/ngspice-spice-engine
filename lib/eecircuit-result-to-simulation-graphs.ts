@@ -1,4 +1,4 @@
-import type { ResultType } from "@tscircuit/eecircuit-engine"
+import type { ResultType } from "./eecircuit-engine-types"
 import {
   createCurrentGraphFromRequestedPlot,
   createVoltageGraphFromRequestedPlot,
