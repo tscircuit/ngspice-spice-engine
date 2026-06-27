@@ -1,8 +1,14 @@
+import { createHash } from "node:crypto"
+import { mkdir, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { pathToFileURL } from "node:url"
 import type { SimulationConstructor } from "./eecircuit-engine-types"
 
 const EECIRCUIT_ENGINE_URL =
   "https://jscdn.tscircuit.com/@tscircuit/eecircuit-engine/1.7.4/+esm"
 const EECIRCUIT_ENGINE_PACKAGE = "@tscircuit/eecircuit-engine"
+const EECIRCUIT_ENGINE_TMP_DIR = join(tmpdir(), "ngspice-spice-engine")
 
 export type EecircuitEngineModule = {
   Simulation: SimulationConstructor
@@ -13,7 +19,14 @@ let modulePromise: Promise<EecircuitEngineModule> | null = null
 const importEecircuitEngineModule = async (
   source: string,
 ): Promise<EecircuitEngineModule> => {
-  const moduleUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(source)}`
+  await mkdir(EECIRCUIT_ENGINE_TMP_DIR, { recursive: true })
+  const sourceHash = createHash("sha256").update(source).digest("hex")
+  const modulePath = join(
+    EECIRCUIT_ENGINE_TMP_DIR,
+    `eecircuit-engine-${sourceHash}.mjs`,
+  )
+  await writeFile(modulePath, source)
+  const moduleUrl = pathToFileURL(modulePath).href
   return import(moduleUrl) as Promise<EecircuitEngineModule>
 }
 
