@@ -9,7 +9,8 @@
   ],
   "scripts": {
     "build": "tsup-node ./lib/index.ts --dts --format esm",
-    "test": "bun test",
+    "test": "bun test && bun run test:node-loader",
+    "test:node-loader": "bun run build && node ./tests/ngspice-node-loader-regression.mjs",
     "test:watch": "bun test --watch",
     "format": "biome format --write .",
     "format:check": "biome format --diagnostic-level=error .",
