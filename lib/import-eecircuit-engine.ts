@@ -1,14 +1,8 @@
-import { createHash } from "node:crypto"
-import { mkdir, writeFile } from "node:fs/promises"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { pathToFileURL } from "node:url"
 import type { SimulationConstructor } from "./eecircuit-engine-types"
 
 const EECIRCUIT_ENGINE_URL =
   "https://jscdn.tscircuit.com/@tscircuit/eecircuit-engine/1.7.4/+esm"
 const EECIRCUIT_ENGINE_PACKAGE = "@tscircuit/eecircuit-engine"
-const EECIRCUIT_ENGINE_TMP_DIR = join(tmpdir(), "ngspice-spice-engine")
 
 export type EecircuitEngineModule = {
   Simulation: SimulationConstructor
@@ -16,18 +10,47 @@ export type EecircuitEngineModule = {
 
 let modulePromise: Promise<EecircuitEngineModule> | null = null
 
+const isBrowserRuntime = (): boolean =>
+  typeof window !== "undefined" && typeof document !== "undefined"
+
 const importEecircuitEngineModule = async (
   source: string,
 ): Promise<EecircuitEngineModule> => {
-  await mkdir(EECIRCUIT_ENGINE_TMP_DIR, { recursive: true })
+  if (isBrowserRuntime()) {
+    const moduleUrl = URL.createObjectURL(
+      new Blob([source], { type: "text/javascript" }),
+    )
+
+    try {
+      return (await import(moduleUrl)) as Promise<EecircuitEngineModule>
+    } finally {
+      URL.revokeObjectURL(moduleUrl)
+    }
+  }
+
+  const [
+    { createHash },
+    { mkdir, writeFile },
+    { tmpdir },
+    { join },
+    { pathToFileURL },
+  ] = await Promise.all([
+    import("node:crypto"),
+    import("node:fs/promises"),
+    import("node:os"),
+    import("node:path"),
+    import("node:url"),
+  ])
+
+  const moduleDir = join(tmpdir(), "ngspice-spice-engine")
+  await mkdir(moduleDir, { recursive: true })
   const sourceHash = createHash("sha256").update(source).digest("hex")
-  const modulePath = join(
-    EECIRCUIT_ENGINE_TMP_DIR,
-    `eecircuit-engine-${sourceHash}.mjs`,
-  )
+  const modulePath = join(moduleDir, `eecircuit-engine-${sourceHash}.mjs`)
   await writeFile(modulePath, source)
-  const moduleUrl = pathToFileURL(modulePath).href
-  return import(moduleUrl) as Promise<EecircuitEngineModule>
+
+  return import(
+    pathToFileURL(modulePath).href
+  ) as Promise<EecircuitEngineModule>
 }
 
 const importEecircuitEngineFromCdn =
