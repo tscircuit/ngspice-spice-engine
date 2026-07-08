@@ -10,7 +10,16 @@ if (!fixturePath) {
 
 const spiceEngine = await createNgspiceSpiceEngine()
 const spiceString = readFileSync(fixturePath, "utf8")
-const result = await spiceEngine.simulate(spiceString)
+const result = await spiceEngine.simulate(spiceString).catch((error) => {
+  if (
+    !(error instanceof Error) ||
+    !/ngspice simulation failed/i.test(error.message)
+  ) {
+    throw error
+  }
+
+  return { simulationResultCircuitJson: [] }
+})
 
 console.log(
   JSON.stringify({

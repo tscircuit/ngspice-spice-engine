@@ -1,7 +1,7 @@
 import type { SimulationConstructor } from "./eecircuit-engine-types"
 
 const EECIRCUIT_ENGINE_URL =
-  "https://jscdn.tscircuit.com/@tscircuit/eecircuit-engine/1.7.4/+esm"
+  "https://jscdn.tscircuit.com/@tscircuit/eecircuit-engine/1.7.6/+esm"
 
 export type EecircuitEngineModule = {
   Simulation: SimulationConstructor
