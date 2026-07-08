@@ -35,13 +35,7 @@ const simulate = async (
   const simulationSpiceString = rewritePspiceCompatibilitySyntax(spiceString)
   simulation.setNetList(simulationSpiceString)
 
-  let result: ResultType | null
-  try {
-    result = await simulation.runSim()
-  } catch (error) {
-    console.error(error)
-    throw error
-  }
+  const result: ResultType | null = await simulation.runSim()
 
   if (!result) {
     return { simulationResultCircuitJson: [] }
