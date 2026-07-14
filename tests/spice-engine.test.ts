@@ -3,6 +3,53 @@ import { createNgspiceSpiceEngine } from "../lib"
 
 describe("ngspiceSpiceEngine", () => {
   test(
+    "should emit scalar voltage and current operating-point output",
+    async () => {
+      const spiceEngine = await createNgspiceSpiceEngine()
+
+      const spiceString = `
+V1 in 0 DC 1
+Vsense in out DC 0
+R1 out 0 100
+* tscircuit_probe {"simulation_voltage_probe_id":"vp1","name":"VOUT","spice_vector":"V(out)","source_node_name":"out"}
+* tscircuit_current_probe {"simulation_current_probe_id":"cp1","name":"ILOAD","spice_vector":"I(Vsense)","source_component_id":"R1"}
+.PRINT OP V(out) I(Vsense)
+.SAVE V(out) I(Vsense)
+.op
+.END
+`
+
+      const { simulationResultCircuitJson } =
+        await spiceEngine.simulate(spiceString)
+
+      expect(simulationResultCircuitJson).toHaveLength(2)
+      const voltage = simulationResultCircuitJson.find(
+        (element) =>
+          (element as { type: string }).type ===
+          "simulation_operating_point_voltage",
+      ) as any
+      const current = simulationResultCircuitJson.find(
+        (element) =>
+          (element as { type: string }).type ===
+          "simulation_operating_point_current",
+      ) as any
+
+      expect(voltage).toMatchObject({
+        simulation_voltage_probe_id: "vp1",
+        name: "VOUT",
+        voltage: 1,
+      })
+      expect(current).toMatchObject({
+        simulation_current_probe_id: "cp1",
+        name: "ILOAD",
+        source_component_id: "R1",
+      })
+      expect(Math.abs(current.current)).toBeCloseTo(0.01)
+    },
+    { timeout: 15_000 },
+  )
+
+  test(
     "should emit voltage-only transient graph output",
     async () => {
       const spiceEngine = await createNgspiceSpiceEngine()
