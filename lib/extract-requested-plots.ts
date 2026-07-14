@@ -1,7 +1,10 @@
 export const extractRequestedPlots = (
   spiceString: string,
+  analysis: "tran" | "op" = "tran",
 ): Map<string, string> | null => {
-  const match = spiceString.match(/\.print\s+tran\s+(.*)/i)
+  const match = spiceString.match(
+    new RegExp(`\\.print\\s+${analysis}\\s+(.*)`, "i"),
+  )
   if (!match?.[1]) {
     return null
   }
