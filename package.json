@@ -7,9 +7,6 @@
   "files": [
     "dist"
   ],
-  "dependencies": {
-    "spicets": "^0.0.4"
-  },
   "scripts": {
     "build": "tsup-node ./lib/index.ts --dts --format esm",
     "test": "bun test",
@@ -27,12 +24,14 @@
     "format-si-unit": "^0.0.7",
     "@biomejs/biome": "^2.2.7",
     "@types/bun": "latest",
+    "spicets": "^0.0.4",
     "tscircuit": "^0.0.805",
     "tsup": "^8.5.0"
   },
   "peerDependencies": {
     "typescript": "^5",
     "circuit-json": "*",
-    "@tscircuit/props": "*"
+    "@tscircuit/props": "*",
+    "spicets": "*"
   }
 }
