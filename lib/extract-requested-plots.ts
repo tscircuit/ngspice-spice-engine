@@ -1,7 +1,14 @@
+export type SpiceVector = string
+export type NormalizedSpiceVector = string
+export type RequestedPlotByNormalizedSpiceVector = Map<
+  NormalizedSpiceVector,
+  SpiceVector
+>
+
 export const extractRequestedPlots = (
   spiceString: string,
-): Map<string, string> | null => {
-  const match = spiceString.match(/\.print\s+tran\s+(.*)/i)
+): RequestedPlotByNormalizedSpiceVector | null => {
+  const match = spiceString.match(/^\s*\.print\s+(?:tran|op|dc|ac)\s+(.*)$/im)
   if (!match?.[1]) {
     return null
   }
@@ -12,13 +19,14 @@ export const extractRequestedPlots = (
     return null
   }
 
-  const plotMap = new Map<string, string>()
+  const requestedPlotByNormalizedSpiceVector: RequestedPlotByNormalizedSpiceVector =
+    new Map()
   for (const token of tokens) {
-    const lowerCaseToken = token.toLowerCase().replace(/\s/g, "")
-    if (!plotMap.has(lowerCaseToken)) {
-      plotMap.set(lowerCaseToken, token)
+    const normalizedSpiceVector = token.toLowerCase().replace(/\s/g, "")
+    if (!requestedPlotByNormalizedSpiceVector.has(normalizedSpiceVector)) {
+      requestedPlotByNormalizedSpiceVector.set(normalizedSpiceVector, token)
     }
   }
 
-  return plotMap
+  return requestedPlotByNormalizedSpiceVector
 }

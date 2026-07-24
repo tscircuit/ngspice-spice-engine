@@ -241,4 +241,115 @@ Vsimulation_voltage_source_1 N6 0 DC 3
     },
     { timeout: 15_000 },
   )
+
+  test(
+    "should emit DC operating point results",
+    async () => {
+      const spiceEngine = await createNgspiceSpiceEngine()
+      const spiceString = `
+V1 in 0 DC 5
+R1 in out 1k
+R2 out 0 1k
+* tscircuit_probe {"simulation_voltage_probe_id":"simulation_voltage_probe_0","name":"VOUT","spice_vector":"V(out)","source_node_name":"out"}
+* tscircuit_current_probe {"simulation_current_probe_id":"simulation_current_probe_0","name":"IV1","spice_vector":"I(V1)"}
+.PRINT OP V(out) I(V1)
+.op
+.END
+`
+
+      const { simulationResultCircuitJson } =
+        await spiceEngine.simulate(spiceString)
+
+      expect(simulationResultCircuitJson).toMatchObject([
+        {
+          type: "simulation_dc_operating_point_voltage",
+          simulation_voltage_probe_id: "simulation_voltage_probe_0",
+          voltage: 2.5,
+          name: "VOUT",
+        },
+        {
+          type: "simulation_dc_operating_point_current",
+          simulation_current_probe_id: "simulation_current_probe_0",
+          current: -0.0025,
+          name: "IV1",
+        },
+      ])
+    },
+    { timeout: 15_000 },
+  )
+
+  test(
+    "should emit DC sweep graphs",
+    async () => {
+      const spiceEngine = await createNgspiceSpiceEngine()
+      const spiceString = `
+V1 in 0 DC 0
+R1 in out 1k
+R2 out 0 1k
+.PRINT DC V(out) I(V1)
+.dc V1 0 2 1
+.END
+`
+
+      const { simulationResultCircuitJson } =
+        await spiceEngine.simulate(spiceString)
+
+      expect(simulationResultCircuitJson).toMatchObject([
+        {
+          type: "simulation_dc_sweep_voltage_graph",
+          sweep_values: [0, 1, 2],
+          sweep_unit: "V",
+          voltage_levels: [0, 0.5, 1],
+        },
+        {
+          type: "simulation_dc_sweep_current_graph",
+          sweep_values: [0, 1, 2],
+          sweep_unit: "V",
+          current_levels: [0, -0.0005, -0.001],
+        },
+      ])
+    },
+    { timeout: 15_000 },
+  )
+
+  test(
+    "should emit AC sweep graphs with complex samples",
+    async () => {
+      const spiceEngine = await createNgspiceSpiceEngine()
+      const spiceString = `
+V1 in 0 DC 0 AC 1 0
+R1 in out 1k
+C1 out 0 1u
+.PRINT AC V(out) I(V1)
+.ac lin 3 10 100
+.END
+`
+
+      const { simulationResultCircuitJson } =
+        await spiceEngine.simulate(spiceString)
+
+      expect(simulationResultCircuitJson).toHaveLength(2)
+      expect(simulationResultCircuitJson[0]).toMatchObject({
+        type: "simulation_ac_sweep_voltage_graph",
+        frequencies_hz: [10, 55, 100],
+      })
+      expect(simulationResultCircuitJson[1]).toMatchObject({
+        type: "simulation_ac_sweep_current_graph",
+        frequencies_hz: [10, 55, 100],
+      })
+
+      const voltageGraph = simulationResultCircuitJson[0]
+      const currentGraph = simulationResultCircuitJson[1]
+      expect(voltageGraph?.type).toBe("simulation_ac_sweep_voltage_graph")
+      expect(currentGraph?.type).toBe("simulation_ac_sweep_current_graph")
+      if (
+        voltageGraph?.type === "simulation_ac_sweep_voltage_graph" &&
+        currentGraph?.type === "simulation_ac_sweep_current_graph"
+      ) {
+        expect(voltageGraph.complex_voltages).toHaveLength(3)
+        expect(currentGraph.complex_currents).toHaveLength(3)
+      }
+    },
+    { timeout: 15_000 },
+  )
 })

@@ -1,10 +1,12 @@
-import type { ResultType } from "./eecircuit-engine-types"
+import { acSweepResultToGraphs } from "./ac-sweep-result-to-graphs"
 import {
   createCurrentGraphFromRequestedPlot,
   createVoltageGraphFromRequestedPlot,
   getCurrentName,
   getNetName,
 } from "./create-graph-from-requested-plot"
+import { dcSweepResultToGraphs } from "./dc-sweep-result-to-graphs"
+import type { ResultType } from "./eecircuit-engine-types"
 import {
   extractCurrentProbeMetadata,
   extractVoltageProbeMetadata,
@@ -12,75 +14,120 @@ import {
 } from "./extract-probe-metadata"
 import { extractRequestedPlots } from "./extract-requested-plots"
 import { linearInterpolate } from "./linear-interpolate"
+import { operatingPointResultToGraphs } from "./operating-point-result-to-graphs"
+import { parseSimulationAnalysis } from "./parse-simulation-analysis"
 import { parseTranParams } from "./parse-tran-params"
 import type {
   CurrentGraph,
   SimulationGraph,
   VoltageGraph,
 } from "./simulation-graph-types"
+import type { RealSamplesBySpiceVector } from "./simulation-output-maps"
 
 export const eecircuitResultToSimulationGraphs = (
   result: ResultType,
   spiceString: string,
 ): SimulationGraph[] => {
+  const analysis = parseSimulationAnalysis(spiceString)
+
+  if (analysis?.type === "dc_operating_point") {
+    return result.dataType === "real"
+      ? operatingPointResultToGraphs({ eecircuitResult: result, spiceString })
+      : []
+  }
+
+  if (analysis?.type === "dc_sweep") {
+    return result.dataType === "real"
+      ? dcSweepResultToGraphs({
+          eecircuitResult: result,
+          spiceString,
+          sweepUnit: analysis.sweepUnit,
+        })
+      : []
+  }
+
+  if (analysis?.type === "ac_sweep") {
+    return result.dataType === "complex"
+      ? acSweepResultToGraphs({ eecircuitResult: result, spiceString })
+      : []
+  }
+
   if (!result?.data || result.dataType !== "real") {
     return []
   }
 
-  const timeData = result.data.find((item) => item.type === "time")
-  if (!timeData || !Array.isArray(timeData.values)) {
+  const timeOutput = result.data.find(
+    (simulationOutput) => simulationOutput.type === "time",
+  )
+  if (!timeOutput || !Array.isArray(timeOutput.values)) {
     return []
   }
-  const timeValues = timeData.values as number[]
+  const timeSeconds = timeOutput.values
 
-  const voltageDataItems = result.data.filter(
-    (item) => item.type === "voltage" && Array.isArray(item.values),
+  const voltageOutputs = result.data.filter(
+    (simulationOutput) =>
+      simulationOutput.type === "voltage" &&
+      Array.isArray(simulationOutput.values),
   )
 
-  const voltageDataMap = new Map<string, number[]>()
-  for (const item of voltageDataItems) {
-    voltageDataMap.set(item.name.toLowerCase(), item.values as number[])
+  const voltageSamplesBySpiceVector: RealSamplesBySpiceVector = new Map()
+  for (const voltageOutput of voltageOutputs) {
+    voltageSamplesBySpiceVector.set(
+      normalizeSpiceVector(voltageOutput.name),
+      voltageOutput.values,
+    )
   }
 
-  const currentDataItems = result.data.filter(
-    (item) => item.type === "current" && Array.isArray(item.values),
+  const currentOutputs = result.data.filter(
+    (simulationOutput) =>
+      simulationOutput.type === "current" &&
+      Array.isArray(simulationOutput.values),
   )
 
-  const currentDataMap = new Map<string, number[]>()
-  for (const item of currentDataItems) {
-    currentDataMap.set(normalizeSpiceVector(item.name), item.values as number[])
+  const currentSamplesBySpiceVector: RealSamplesBySpiceVector = new Map()
+  for (const currentOutput of currentOutputs) {
+    currentSamplesBySpiceVector.set(
+      normalizeSpiceVector(currentOutput.name),
+      currentOutput.values,
+    )
   }
 
-  const requestedPlots = extractRequestedPlots(spiceString)
-  const voltageProbeMetadata = extractVoltageProbeMetadata(spiceString)
-  const currentProbeMetadata = extractCurrentProbeMetadata(spiceString)
+  const requestedPlotByNormalizedSpiceVector =
+    extractRequestedPlots(spiceString)
+  const voltageProbeMetadataBySpiceVector =
+    extractVoltageProbeMetadata(spiceString)
+  const currentProbeMetadataBySpiceVector =
+    extractCurrentProbeMetadata(spiceString)
 
-  if (!requestedPlots) {
+  if (!requestedPlotByNormalizedSpiceVector) {
     return [
-      ...voltageDataItems.map((item) => {
-        const metadata = voltageProbeMetadata.get(
-          normalizeSpiceVector(item.name),
+      ...voltageOutputs.map((voltageOutput) => {
+        const probeMetadata = voltageProbeMetadataBySpiceVector.get(
+          normalizeSpiceVector(voltageOutput.name),
         )
         const voltageGraph: VoltageGraph = {
           graphType: "voltage" as const,
-          netName: metadata?.name ?? getNetName(item.name),
-          time: timeValues,
-          voltage: item.values as number[],
-          probeMetadata: metadata,
+          analysisType: "transient",
+          netName: probeMetadata?.name ?? getNetName(voltageOutput.name),
+          time: timeSeconds,
+          voltage: voltageOutput.values,
+          probeMetadata,
         }
 
         return voltageGraph
       }),
-      ...currentDataItems.map((item) => {
-        const metadata = currentProbeMetadata.get(
-          normalizeSpiceVector(item.name),
+      ...currentOutputs.map((currentOutput) => {
+        const probeMetadata = currentProbeMetadataBySpiceVector.get(
+          normalizeSpiceVector(currentOutput.name),
         )
         const currentGraph: CurrentGraph = {
           graphType: "current" as const,
-          currentName: metadata?.name ?? getCurrentName(item.name),
-          time: timeValues,
-          current: item.values as number[],
-          probeMetadata: metadata,
+          analysisType: "transient",
+          currentName:
+            probeMetadata?.name ?? getCurrentName(currentOutput.name),
+          time: timeSeconds,
+          current: currentOutput.values,
+          probeMetadata,
         }
 
         return currentGraph
@@ -88,22 +135,25 @@ export const eecircuitResultToSimulationGraphs = (
     ]
   }
 
-  const graphs: SimulationGraph[] = []
-  for (const [lowerCaseToken, originalToken] of requestedPlots.entries()) {
+  const graphs: Array<VoltageGraph | CurrentGraph> = []
+  for (const [
+    normalizedSpiceVector,
+    originalSpiceVector,
+  ] of requestedPlotByNormalizedSpiceVector) {
     const graph =
       createVoltageGraphFromRequestedPlot({
-        lowerCaseToken,
-        originalToken,
-        timeValues,
-        voltageDataMap,
-        voltageProbeMetadata,
+        normalizedSpiceVector,
+        originalSpiceVector,
+        timeSeconds,
+        voltageSamplesBySpiceVector,
+        voltageProbeMetadataBySpiceVector,
       }) ??
       createCurrentGraphFromRequestedPlot({
-        lowerCaseToken,
-        originalToken,
-        timeValues,
-        currentDataMap,
-        currentProbeMetadata,
+        normalizedSpiceVector,
+        originalSpiceVector,
+        timeSeconds,
+        currentSamplesBySpiceVector,
+        currentProbeMetadataBySpiceVector,
       })
 
     if (graph) graphs.push(graph)
@@ -156,6 +206,7 @@ export const eecircuitResultToVGraphs = (
   spiceString: string,
 ): VoltageGraph[] => {
   return eecircuitResultToSimulationGraphs(result, spiceString).filter(
-    (graph): graph is VoltageGraph => graph.graphType === "voltage",
+    (graph): graph is VoltageGraph =>
+      graph.graphType === "voltage" && graph.analysisType === "transient",
   )
 }
