@@ -62,6 +62,8 @@ export const createNgspiceSpiceEngine = async (): Promise<SpiceEngine> => {
 
 export default createNgspiceSpiceEngine
 
+export type { SimulationAnalysis } from "./parse-simulation-analysis"
+export { parseSimulationAnalysis } from "./parse-simulation-analysis"
 export type { TranParams } from "./parse-tran-params"
 export { rewritePspiceCompatibilitySyntax } from "./rewrite-pspice-compatibility-syntax"
 export {
