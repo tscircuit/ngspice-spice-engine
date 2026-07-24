@@ -1,3 +1,5 @@
+import { Print, parseSpiceNetlist } from "spicets"
+
 export type SpiceVector = string
 export type NormalizedSpiceVector = string
 export type RequestedPlotByNormalizedSpiceVector = Map<
@@ -8,12 +10,19 @@ export type RequestedPlotByNormalizedSpiceVector = Map<
 export const extractRequestedPlots = (
   spiceString: string,
 ): RequestedPlotByNormalizedSpiceVector | null => {
-  const match = spiceString.match(/^\s*\.print\s+(?:tran|op|dc|ac)\s+(.*)$/im)
-  if (!match?.[1]) {
+  const supportedAnalyses = new Set(["tran", "op", "dc", "ac"])
+  const print = parseSpiceNetlist(spiceString, {
+    dialect: "ngspice",
+  }).directives.find(
+    (directive) =>
+      directive instanceof Print &&
+      supportedAnalyses.has(directive.analysis?.toLowerCase() ?? ""),
+  )
+  if (!(print instanceof Print)) {
     return null
   }
 
-  const tokens = match[1].match(/[VI]\s*\([^)]+\)/gi)
+  const tokens = print.getString().match(/[VI]\s*\([^)]+\)/gi)
 
   if (!tokens) {
     return null

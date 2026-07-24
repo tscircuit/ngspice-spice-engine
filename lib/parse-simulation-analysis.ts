@@ -1,3 +1,5 @@
+import { Ac, Dc, Op, parseSpiceNetlist, Tran } from "spicets"
+
 export type SimulationAnalysis =
   | { type: "transient" }
   | { type: "dc_operating_point" }
@@ -7,23 +9,28 @@ export type SimulationAnalysis =
 export const parseSimulationAnalysis = (
   spiceString: string,
 ): SimulationAnalysis | null => {
-  if (/^\s*\.tran\b/im.test(spiceString)) {
+  const analyses = parseSpiceNetlist(spiceString, {
+    dialect: "ngspice",
+  }).analyses
+
+  if (analyses.some((analysis) => analysis instanceof Tran)) {
     return { type: "transient" }
   }
 
-  if (/^\s*\.op\b/im.test(spiceString)) {
+  if (analyses.some((analysis) => analysis instanceof Op)) {
     return { type: "dc_operating_point" }
   }
 
-  const dcSweepMatch = spiceString.match(/^\s*\.dc\s+(\S+)/im)
-  if (dcSweepMatch?.[1]) {
+  const dcSweep = analyses.find((analysis) => analysis instanceof Dc)
+  if (dcSweep) {
+    const source = dcSweep.sweeps[0]?.source
     return {
       type: "dc_sweep",
-      sweepUnit: dcSweepMatch[1].toLowerCase().startsWith("i") ? "A" : "V",
+      sweepUnit: source?.toLowerCase().startsWith("i") ? "A" : "V",
     }
   }
 
-  if (/^\s*\.ac\b/im.test(spiceString)) {
+  if (analyses.some((analysis) => analysis instanceof Ac)) {
     return { type: "ac_sweep" }
   }
 

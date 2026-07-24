@@ -7,6 +7,9 @@
   "files": [
     "dist"
   ],
+  "dependencies": {
+    "spicets": "^0.0.4"
+  },
   "scripts": {
     "build": "tsup-node ./lib/index.ts --dts --format esm",
     "test": "bun test",

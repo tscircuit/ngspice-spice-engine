@@ -1,3 +1,5 @@
+import { parseSpiceNetlist, Tran } from "spicets"
+
 export interface TranParams {
   tstep?: number
   tstop?: number
@@ -54,59 +56,34 @@ const parseNumericToken = (token: string): number | undefined => {
 }
 
 export const parseTranParams = (spiceString: string): TranParams | null => {
-  const lines = spiceString.split(/\r?\n/)
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim()
-    if (!line || line.startsWith("*")) {
-      continue
-    }
-
-    if (!line.toLowerCase().startsWith(".tran")) {
-      continue
-    }
-
-    const [withoutComments = ""] = line.split(";")
-    const tokens = withoutComments.split(/\s+/).filter(Boolean)
-
-    if (tokens.length <= 1) {
-      return {}
-    }
-
-    const values: number[] = []
-    let uic = false
-
-    for (const token of tokens.slice(1)) {
-      if (token.toLowerCase() === "uic") {
-        uic = true
-        continue
-      }
-
-      const value = parseNumericToken(token)
-      if (value !== undefined) {
-        values.push(value)
-      }
-    }
-
-    const params: TranParams = {}
-    if (values[0] !== undefined) {
-      params.tstep = values[0]
-    }
-    if (values[1] !== undefined) {
-      params.tstop = values[1]
-    }
-    if (values[2] !== undefined) {
-      params.tstart = values[2]
-    }
-    if (values[3] !== undefined) {
-      params.tmax = values[3]
-    }
-    if (uic) {
-      params.uic = true
-    }
-
-    return params
+  const tran = parseSpiceNetlist(spiceString, {
+    dialect: "ngspice",
+  }).analyses.find((analysis) => analysis instanceof Tran)
+  if (!tran) {
+    return null
   }
 
-  return null
+  const params: TranParams = {}
+  const tstep = tran.step ? parseNumericToken(tran.step.raw) : undefined
+  const tstop = parseNumericToken(tran.stop.raw)
+  const tstart = tran.start ? parseNumericToken(tran.start.raw) : undefined
+  const tmax = tran.maxStep ? parseNumericToken(tran.maxStep.raw) : undefined
+
+  if (tstep !== undefined) {
+    params.tstep = tstep
+  }
+  if (tstop !== undefined) {
+    params.tstop = tstop
+  }
+  if (tstart !== undefined) {
+    params.tstart = tstart
+  }
+  if (tmax !== undefined) {
+    params.tmax = tmax
+  }
+  if (tran.uic) {
+    params.uic = true
+  }
+
+  return params
 }
