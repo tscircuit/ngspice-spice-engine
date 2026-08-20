@@ -1,6 +1,6 @@
 {
   "name": "@tscircuit/ngspice-spice-engine",
-  "version": "0.0.20",
+  "version": "0.0.21",
   "repository": {
     "type": "git",
     "url": "https://github.com/tscircuit/ngspice-spice-engine"
