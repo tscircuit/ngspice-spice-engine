@@ -20,6 +20,9 @@
     "lint": "biome check .",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "@tscircuit/eecircuit-engine": "https://jscdn.tscircuit.com/@tscircuit/eecircuit-engine/1.7.6.tgz"
+  },
   "devDependencies": {
     "@tscircuit/props": "^0.0.592",
     "bun-match-svg": "^0.0.14",
