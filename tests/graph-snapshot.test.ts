@@ -179,4 +179,40 @@ Vsimulation_voltage_source_0 VP_IN1 0 SIN(0 5 40 0 0 0)
     },
     { timeout: 15_000 },
   )
+
+  test(
+    "should simulate piecewise-linear voltage and current sources",
+    async () => {
+      const spiceEngine = await createNgspiceSpiceEngine()
+
+      const spiceString = `
+V_WAVE in 0 PWL(0 0 0.001 5 0.002 0)
+R_LOAD in out 1k
+I_WAVE out sense PWL(0 0 0.001 2 0.002 0)
+V_SENSE sense 0 DC 0
+* tscircuit_probe {"simulation_voltage_probe_id":"simulation_voltage_probe_waveform","name":"V_WAVE","spice_vector":"V(in)","source_node_name":"in"}
+* tscircuit_current_probe {"simulation_current_probe_id":"simulation_current_probe_waveform","name":"I_WAVE","spice_vector":"I(V_SENSE)"}
+.PRINT TRAN V(in) I(V_SENSE)
+.tran 0.0001 0.002 UIC
+.END
+`
+
+      const { simulationResultCircuitJson: originalSimulationResult } =
+        await spiceEngine.simulate(spiceString)
+
+      expect(originalSimulationResult).toHaveLength(2)
+
+      const svg = renderSimulationGraphSvg({
+        originalSimulationResult,
+        simulation_experiment_id: "test_experiment_id_pwl_sources",
+        name: "Piecewise-Linear Sources",
+      })
+
+      expect(svg).toMatchSvgSnapshot(
+        import.meta.path,
+        "piecewise-linear-sources",
+      )
+    },
+    { timeout: 15_000 },
+  )
 })
