@@ -1,5 +1,6 @@
 {
   "name": "@tscircuit/ngspice-spice-engine",
+  "license": "MIT",
   "version": "0.0.21",
   "repository": {
     "type": "git",
