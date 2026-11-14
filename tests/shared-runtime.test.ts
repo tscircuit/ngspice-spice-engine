@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import {
-  createNgspiceSimulation,
   createNgspiceSpiceEngine,
+  getNgspiceSimulation,
   NGSPICE_ENGINE,
   rewritePspiceCompatibilitySyntax,
 } from "../lib"
@@ -14,7 +14,8 @@ R2 out 0 1k
 .print tran v(out)
 .tran 1u 2u
 .end`
-  const rawEngine = await createNgspiceSimulation()
+  const rawEngine = await getNgspiceSimulation()
+  expect(await getNgspiceSimulation()).toBe(rawEngine)
   rawEngine.setNetList(rewritePspiceCompatibilitySyntax(spice))
   const result = await rawEngine.runSim()
   const voltage = result.data.find((series) => series.name === "v(out)")
