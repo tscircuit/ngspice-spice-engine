@@ -1,6 +1,6 @@
 import type { SpiceEngine } from "@tscircuit/props"
 import type { CircuitJson } from "circuit-json"
-import type { ResultType, Simulation } from "./eecircuit-engine-types"
+import type { ResultType } from "./eecircuit-engine-types"
 import { getNgspiceSimulation } from "./get-ngspice-simulation"
 import { parseTranParams } from "./parse-tran-params"
 import { rewritePspiceCompatibilitySyntax } from "./rewrite-pspice-compatibility-syntax"
