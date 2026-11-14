@@ -1,6 +1,11 @@
 {
   "name": "@tscircuit/ngspice-spice-engine",
-  "version": "0.0.20",
+  "license": "MIT",
+  "version": "0.0.22",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tscircuit/ngspice-spice-engine"
+  },
   "description": "A tscircuit-compatible SPICE engine using ngspice.",
   "type": "module",
   "main": "./dist/index.js",
