@@ -1,7 +1,7 @@
 import type { SpiceEngine } from "@tscircuit/props"
 import type { CircuitJson } from "circuit-json"
 import type { ResultType, Simulation } from "./eecircuit-engine-types"
-import { importEecircuitEngine } from "./import-eecircuit-engine"
+import { createNgspiceSimulation } from "./create-ngspice-simulation"
 import { parseTranParams } from "./parse-tran-params"
 import { rewritePspiceCompatibilitySyntax } from "./rewrite-pspice-compatibility-syntax"
 import {
@@ -9,18 +9,11 @@ import {
   simulationGraphsToCircuitJson,
 } from "./simulation-graphs"
 
-const ensureSimulation = async (): Promise<Simulation> => {
-  const { Simulation: SimulationCtor } = await importEecircuitEngine()
-  const instance = new SimulationCtor({ ngBehavior: "psa" })
-  await instance.start()
-  return instance
-}
-
 let simulationPromise: Promise<Simulation> | null = null
 
 const getSimulation = async (): Promise<Simulation> => {
   if (!simulationPromise) {
-    simulationPromise = ensureSimulation().catch((error) => {
+    simulationPromise = createNgspiceSimulation().catch((error) => {
       simulationPromise = null
       throw error
     })
@@ -61,6 +54,10 @@ export const createNgspiceSpiceEngine = async (): Promise<SpiceEngine> => {
 }
 
 export default createNgspiceSpiceEngine
+
+export { createNgspiceSimulation } from "./create-ngspice-simulation"
+export { NGSPICE_ENGINE } from "./import-eecircuit-engine"
+export type { ResultType, Simulation } from "./eecircuit-engine-types"
 
 export type { SimulationAnalysis } from "./parse-simulation-analysis"
 export { parseSimulationAnalysis } from "./parse-simulation-analysis"
