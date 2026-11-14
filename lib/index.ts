@@ -1,7 +1,7 @@
 import type { SpiceEngine } from "@tscircuit/props"
 import type { CircuitJson } from "circuit-json"
-import type { ResultType, Simulation } from "./eecircuit-engine-types"
-import { importEecircuitEngine } from "./import-eecircuit-engine"
+import type { ResultType } from "./eecircuit-engine-types"
+import { getNgspiceSimulation } from "./get-ngspice-simulation"
 import { parseTranParams } from "./parse-tran-params"
 import { rewritePspiceCompatibilitySyntax } from "./rewrite-pspice-compatibility-syntax"
 import {
@@ -9,29 +9,10 @@ import {
   simulationGraphsToCircuitJson,
 } from "./simulation-graphs"
 
-const ensureSimulation = async (): Promise<Simulation> => {
-  const { Simulation: SimulationCtor } = await importEecircuitEngine()
-  const instance = new SimulationCtor({ ngBehavior: "psa" })
-  await instance.start()
-  return instance
-}
-
-let simulationPromise: Promise<Simulation> | null = null
-
-const getSimulation = async (): Promise<Simulation> => {
-  if (!simulationPromise) {
-    simulationPromise = ensureSimulation().catch((error) => {
-      simulationPromise = null
-      throw error
-    })
-  }
-  return simulationPromise
-}
-
 const simulate = async (
   spiceString: string,
 ): Promise<{ simulationResultCircuitJson: CircuitJson }> => {
-  const simulation = await getSimulation()
+  const simulation = await getNgspiceSimulation()
   const simulationSpiceString = rewritePspiceCompatibilitySyntax(spiceString)
   simulation.setNetList(simulationSpiceString)
 
@@ -61,6 +42,10 @@ export const createNgspiceSpiceEngine = async (): Promise<SpiceEngine> => {
 }
 
 export default createNgspiceSpiceEngine
+
+export type { ResultType, Simulation } from "./eecircuit-engine-types"
+export { getNgspiceSimulation } from "./get-ngspice-simulation"
+export { NGSPICE_ENGINE } from "./import-eecircuit-engine"
 
 export type { SimulationAnalysis } from "./parse-simulation-analysis"
 export { parseSimulationAnalysis } from "./parse-simulation-analysis"
