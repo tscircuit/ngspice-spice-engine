@@ -4,7 +4,25 @@ import { importEecircuitEngine } from "./import-eecircuit-engine"
 const createNgspiceSimulation = async (): Promise<Simulation> => {
   const { Simulation: SimulationCtor } = await importEecircuitEngine()
   const simulation = new SimulationCtor({ ngBehavior: "psa" })
-  await simulation.start()
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  try {
+    // WASM startup can leave only a pending promise on Bun's event loop. Keep
+    // CLI callers alive until startup completes, with a bounded failure path.
+    await Promise.race([
+      simulation.start(),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(
+          () =>
+            reject(
+              new Error("ngspice initialization timed out after 15 seconds"),
+            ),
+          15000,
+        )
+      }),
+    ])
+  } finally {
+    clearTimeout(timeout)
+  }
   return simulation
 }
 
