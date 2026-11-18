@@ -1,8 +1,25 @@
 import { expect, test } from "bun:test"
-import { expectPspiceFixtureToRun } from "./pspice-fixture-utils"
+import { readFile } from "node:fs/promises"
+import { createNgspiceSpiceEngine } from "../../lib"
+import { renderSimulationSnapshot } from "../fixtures/render-simulation-snapshot"
 
-test("preserves reversed PSpice switch resistance", () => {
-  const output = expectPspiceFixtureToRun("reversed-switch-resistance.cir")
+test("reversed PSpice switch resistance", async () => {
+  const engine = await createNgspiceSpiceEngine()
+  const { simulationResultCircuitJson } = await engine.simulate(
+    await readFile(
+      new URL(
+        "../fixtures/pspice/reversed-switch-resistance.cir",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  )
 
-  expect(output.graphs[0]!.firstVoltages[0]).toBeCloseTo(3, 6)
-})
+  expect(simulationResultCircuitJson).toHaveLength(1)
+  expect(
+    renderSimulationSnapshot({
+      simulationResultCircuitJson,
+      name: "3-V source through a reversed-resistance output switch into 1 kohm",
+    }),
+  ).toMatchSvgSnapshot(import.meta.path)
+}, 15_000)
