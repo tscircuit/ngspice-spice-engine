@@ -1,0 +1,9 @@
+* Regulator output isolation switch, as used by TPS7A20
+V1 supply 0 3
+V2 control 0 PWL(0 0 5u 0 6u 1m 10u 1m)
+S1 supply out control 0 OUTPUT_SWITCH
+.model OUTPUT_SWITCH VSWITCH(RON=1MEG ROFF=1u VON=1m VOFF=0)
+R1 out 0 1k
+.print tran V(out)
+.tran 1u 10u
+.end
