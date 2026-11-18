@@ -9,8 +9,8 @@ import { Circuit } from "tscircuit"
 const circuit = new Circuit({
   platform: {
     spiceEngineMap: {
-      ngspice: ngspiceSpiceEngine
-    }
-  }
+      ngspice: ngspiceSpiceEngine,
+    },
+  },
 })
 ```
