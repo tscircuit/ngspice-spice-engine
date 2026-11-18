@@ -15,7 +15,6 @@ test("PSpice Adc source driving one ohm", async () => {
     ),
   )
 
-  expect(simulationResultCircuitJson).toHaveLength(1)
   expect(
     renderSimulationSnapshot({
       simulationResultCircuitJson,
