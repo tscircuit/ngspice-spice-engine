@@ -1,3 +1,5 @@
+import { normalizePspiceSwitchModels } from "./normalize-pspice-switch-models"
+
 const pspiceNumberToken = String.raw`([+-]?(?:(?:\d+(?:\.\d*)?)|(?:\.\d+))(?:[eE][+-]?\d+)?)`
 
 const rewritePspiceResistorTcPairs = (spiceString: string): string =>
@@ -87,4 +89,6 @@ const rewritePspiceValueBooleanCarets = (spiceString: string): string => {
 }
 
 export const rewritePspiceCompatibilitySyntax = (spiceString: string): string =>
-  rewritePspiceValueBooleanCarets(rewritePspiceResistorTcPairs(spiceString))
+  normalizePspiceSwitchModels(
+    rewritePspiceValueBooleanCarets(rewritePspiceResistorTcPairs(spiceString)),
+  )
