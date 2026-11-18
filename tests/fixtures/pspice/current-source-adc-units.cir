@@ -1,0 +1,6 @@
+* Oscillator timing reference, as used by TPS54320
+I1 0 timing DC 1Adc
+R1 timing 0 1
+.print tran V(timing)
+.tran 1u 2u
+.end
