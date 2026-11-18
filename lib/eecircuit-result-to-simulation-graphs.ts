@@ -63,6 +63,28 @@ export const eecircuitResultToSimulationGraphs = (
     return []
   }
   const timeSeconds = timeOutput.values
+  const tranParams = parseTranParams(spiceString)
+  if (tranParams?.tstop !== undefined) {
+    const tstartSeconds = tranParams.tstart ?? 0
+    const lastRequestedTimeSeconds = tranParams.tstep
+      ? tstartSeconds +
+        Math.floor((tranParams.tstop - tstartSeconds) / tranParams.tstep) *
+          tranParams.tstep
+      : tranParams.tstop
+    const lastTimeSeconds = timeSeconds.at(-1)
+    const toleranceSeconds = Math.max(
+      Math.abs(lastRequestedTimeSeconds) * 1e-9,
+      Number.EPSILON,
+    )
+    if (lastTimeSeconds === undefined || !Number.isFinite(lastTimeSeconds)) {
+      throw new Error("Transient simulation produced no finite time samples.")
+    }
+    if (lastTimeSeconds + toleranceSeconds < lastRequestedTimeSeconds) {
+      throw new Error(
+        `Transient simulation stopped at ${lastTimeSeconds} s before the requested output time ${lastRequestedTimeSeconds} s.`,
+      )
+    }
+  }
 
   const voltageOutputs = result.data.filter(
     (simulationOutput) =>
@@ -159,7 +181,6 @@ export const eecircuitResultToSimulationGraphs = (
     if (graph) graphs.push(graph)
   }
 
-  const tranParams = parseTranParams(spiceString)
   if (
     tranParams?.tstep &&
     tranParams.tstep > 0 &&
