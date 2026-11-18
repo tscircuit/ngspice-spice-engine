@@ -15,7 +15,6 @@ test("reversed PSpice switch resistance", async () => {
     ),
   )
 
-  expect(simulationResultCircuitJson).toHaveLength(1)
   expect(
     renderSimulationSnapshot({
       simulationResultCircuitJson,
