@@ -1,5 +1,9 @@
 import type { CircuitJson } from "circuit-json"
-import { convertCircuitJsonToSchematicSimulationSvg } from "circuit-to-svg"
+import {
+  convertCircuitJsonToSchematicSimulationSvg,
+  convertCircuitJsonToSchematicSvg,
+  isSimulationAnalysisResult,
+} from "circuit-to-svg"
 
 export const renderSimulationSnapshot = ({
   simulationResultCircuitJson,
@@ -13,6 +17,13 @@ export const renderSimulationSnapshot = ({
     ...result,
     simulation_experiment_id,
   }))
+  if (!results.some(isSimulationAnalysisResult)) {
+    return convertCircuitJsonToSchematicSvg(results, {
+      width: 1000,
+      height: 500,
+      showErrorsInTextOverlay: true,
+    })
+  }
 
   return convertCircuitJsonToSchematicSimulationSvg({
     circuitJson: [
