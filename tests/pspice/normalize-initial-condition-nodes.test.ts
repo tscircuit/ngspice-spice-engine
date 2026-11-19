@@ -4,7 +4,7 @@ import { normalizePspiceInitialConditionNodes } from "../../lib/normalize-pspice
 test("normalizes initial-condition voltage nodes without changing other cards", () => {
   const spice = `* .IC V(out )=2
 .subckt discharge out params: initial=2
-.IC V(out )={initial} V( internal )=1
+.IC V(out )={initial + V(reference )} V( internal )=1
 .ic v (
 + out ) = 2 ; Keep this comment: V(out )
 R1 out internal 1k
@@ -17,7 +17,7 @@ X1 output discharge
 
   expect(normalizePspiceInitialConditionNodes(spice)).toBe(`* .IC V(out )=2
 .subckt discharge out params: initial=2
-.IC V(out)={initial} V(internal)=1
+.IC V(out)={initial + V(reference )} V(internal)=1
 .ic v(out) = 2 ; Keep this comment: V(out )
 R1 out internal 1k
 .meas tran peak MAX V(out )

@@ -31,7 +31,12 @@ export const normalizePspiceInitialConditionNodes = (
         (token, tokenIndex) =>
           tokenIndex > voltageTokenIndex + 1 && token.raw === ")",
       )
-      if (closingParenthesisTokenIndex <= voltageTokenIndex + 2) continue
+      if (
+        closingParenthesisTokenIndex <= voltageTokenIndex + 2 ||
+        tokens[closingParenthesisTokenIndex + 1]?.raw !== "="
+      ) {
+        continue
+      }
 
       const firstNodeToken = tokens[voltageTokenIndex + 2]!
       const lastNodeToken = tokens[closingParenthesisTokenIndex - 1]!
