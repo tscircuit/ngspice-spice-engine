@@ -1,3 +1,4 @@
+import { normalizePspiceInitialConditionNodes } from "./normalize-pspice-initial-condition-nodes"
 import { normalizePspiceSwitchModels } from "./normalize-pspice-switch-models"
 import { rewritePspiceCurrentSourceUnits } from "./rewrite-pspice-current-source-units"
 
@@ -93,7 +94,9 @@ export const rewritePspiceCompatibilitySyntax = (spiceString: string): string =>
   normalizePspiceSwitchModels(
     rewritePspiceCurrentSourceUnits(
       rewritePspiceValueBooleanCarets(
-        rewritePspiceResistorTcPairs(spiceString),
+        normalizePspiceInitialConditionNodes(
+          rewritePspiceResistorTcPairs(spiceString),
+        ),
       ),
     ),
   )
