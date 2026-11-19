@@ -1,0 +1,11 @@
+* TI-style whitespace in a subcircuit pin initial condition
+.subckt discharge out
+C1 out 0 1u
+R1 out 0 1k
+.IC V(out )=2
+.ends discharge
+X1 output discharge
+.save V(output)
+.print tran V(output)
+.tran 10u 5m UIC
+.end
