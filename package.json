@@ -29,7 +29,7 @@
     "format-si-unit": "^0.0.7",
     "@biomejs/biome": "^2.2.7",
     "@types/bun": "latest",
-    "spicets": "^0.0.4",
+    "spicets": "^0.0.6",
     "tscircuit": "^0.0.805",
     "tsup": "^8.5.0"
   },
