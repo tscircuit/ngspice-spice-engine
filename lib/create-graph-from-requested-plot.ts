@@ -58,12 +58,14 @@ export const createVoltageGraphFromRequestedPlot = ({
     if (!voltageSamples) {
       const positiveNodeName = differentialVoltageMatch[1].trim()
       const referenceNodeName = differentialVoltageMatch[2].trim()
-      const positiveVoltageSamples = voltageSamplesBySpiceVector.get(
-        `v(${positiveNodeName.toLowerCase()})`,
-      )
-      const referenceVoltageSamples = voltageSamplesBySpiceVector.get(
-        `v(${referenceNodeName.toLowerCase()})`,
-      )
+      const positiveVoltageSamples =
+        voltageSamplesBySpiceVector.get(
+          `v(${positiveNodeName.toLowerCase()})`,
+        ) ?? (positiveNodeName === "0" ? timeSeconds.map(() => 0) : undefined)
+      const referenceVoltageSamples =
+        voltageSamplesBySpiceVector.get(
+          `v(${referenceNodeName.toLowerCase()})`,
+        ) ?? (referenceNodeName === "0" ? timeSeconds.map(() => 0) : undefined)
 
       if (positiveVoltageSamples && referenceVoltageSamples) {
         voltageSamples = positiveVoltageSamples.map(
