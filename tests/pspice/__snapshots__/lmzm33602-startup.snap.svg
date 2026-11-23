@@ -9,4 +9,4 @@
               .port-label { fill: rgb(0, 100, 100); }
               .component-name { fill: rgb(0, 100, 100); }
               
-            </style><rect class="boundary" x="0" y="0" width="1000" height="500"/><text x="10" y="20" fill="red" font-family="monospace" font-size="12px" data-type="error_text_overlay" data-layer="global"><tspan x="10" dy="0">Transient simulation stopped at 0.0008120386673005821 s before the requested output time 0.005 s.</tspan></text></svg>
+            </style><rect class="boundary" x="0" y="0" width="1000" height="500"/><text x="10" y="20" fill="red" font-family="monospace" font-size="12px" data-type="error_text_overlay" data-layer="global"><tspan x="10" dy="0">Transient simulation stopped at 0.0008120386673005821 s before the requested output time 0.001 s.</tspan></text></svg>

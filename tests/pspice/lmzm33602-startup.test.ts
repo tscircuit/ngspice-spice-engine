@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises"
 import { createNgspiceSpiceEngine } from "../../lib"
 import { renderSimulationSnapshot } from "../fixtures/render-simulation-snapshot"
 
-test("LMZM33602 startup stops before the requested 5 ms", async () => {
+test("LMZM33602 startup", async () => {
   const engine = await createNgspiceSpiceEngine()
   const spice = await readFile(
     new URL("../fixtures/pspice/lmzm33602-startup.cir", import.meta.url),
@@ -30,7 +30,7 @@ test("LMZM33602 startup stops before the requested 5 ms", async () => {
   expect(
     renderSimulationSnapshot({
       simulationResultCircuitJson,
-      name: "LMZM33602: 24 V input ramp, 12 V target, 24 ohm load, 5 ms startup",
+      name: "LMZM33602: 24 V input ramp, 12 V target, 24 ohm load, 1 ms startup",
     }),
   ).toMatchSvgSnapshot(import.meta.path)
 }, 15_000)

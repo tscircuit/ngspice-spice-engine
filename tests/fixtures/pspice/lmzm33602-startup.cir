@@ -10,7 +10,7 @@ Cout out 0 54u
 Rload out 0 24
 .print tran V(out)
 .save V(out)
-.tran 1u 5m
+.tran 1u 1m
 
 *$
 * LMZM33602
