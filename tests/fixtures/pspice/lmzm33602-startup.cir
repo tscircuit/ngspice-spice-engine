@@ -10,6 +10,8 @@ Cout out 0 54u
 Rload out 0 24
 .print tran V(out)
 .save V(out)
+* Convergence conductance for the ideal-switch model during startup.
+.options gmin=1e-8
 .tran 1u 1m
 
 *$
