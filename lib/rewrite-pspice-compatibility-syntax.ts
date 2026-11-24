@@ -48,7 +48,7 @@ const isPspiceBooleanCaret = (
 const rewritePspiceValueBooleanCarets = (spiceString: string): string => {
   let result = ""
   let cursor = 0
-  const valueStartPattern = /\bVALUE\s*\{/gi
+  const valueStartPattern = /\bVALUE\s*=?\s*\{/gi
 
   for (;;) {
     valueStartPattern.lastIndex = cursor
