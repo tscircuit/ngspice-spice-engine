@@ -27,6 +27,19 @@ V1 in 0 DC 5
     expect(result).toBeNull()
   })
 
+  test("ignores trailing letters after SPICE scale factor suffixes", () => {
+    const result = parseTranParams(`
+.tran 1nsec 8nsec 0 2usec
+`)
+
+    expect(result).toEqual({
+      tstep: 1e-9,
+      tstop: 8e-9,
+      tstart: 0,
+      tmax: 2e-6,
+    })
+  })
+
   test("ignores unparseable tokens", () => {
     const result = parseTranParams(`
 .tran 0.1u 1m foo
