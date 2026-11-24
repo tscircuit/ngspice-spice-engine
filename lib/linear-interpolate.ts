@@ -13,8 +13,14 @@ export const linearInterpolate = (
     return yPoints[yPoints.length - 1]!
   }
   let i = 1
-  while (i < xPoints.length && xPoints[i]! < targetX) {
-    i++
+  let upperIndex = xPoints.length - 1
+  while (i < upperIndex) {
+    const middleIndex = Math.floor((i + upperIndex) / 2)
+    if (xPoints[middleIndex]! < targetX) {
+      i = middleIndex + 1
+    } else {
+      upperIndex = middleIndex
+    }
   }
   const x1 = xPoints[i - 1]!
   const y1 = yPoints[i - 1]!
