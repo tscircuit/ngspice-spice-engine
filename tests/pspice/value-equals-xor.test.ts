@@ -14,17 +14,16 @@ Rout out 0 1k
 .tran 10n 4u UIC
 .end`)
 
-  const output = simulationResultCircuitJson.find(
-    (graph) =>
-      graph.type === "simulation_transient_voltage_graph" &&
-      graph.name === "out",
-  )!
+  const graphs = simulationResultCircuitJson.filter(
+    (graph) => graph.type === "simulation_transient_voltage_graph",
+  )
+  const output = graphs.find((graph) => graph.name === "out")!
   expect(output.voltage_levels).toHaveLength(401)
   // Current caret handling produces AND instead of the XOR truth table.
   expect(
     [50, 150, 250, 350].map((index) => output.voltage_levels[index]),
   ).toEqual([0, 0, 1, 0])
-  expect(renderXorTruthTableSnapshot(output)).toMatchSvgSnapshot(
+  expect(renderXorTruthTableSnapshot(graphs)).toMatchSvgSnapshot(
     import.meta.path,
   )
 })
