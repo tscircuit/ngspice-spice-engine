@@ -19,10 +19,9 @@ Rout out 0 1k
   )
   const output = graphs.find((graph) => graph.name === "out")!
   expect(output.voltage_levels).toHaveLength(401)
-  // Current caret handling produces AND instead of the XOR truth table.
   expect(
     [50, 150, 250, 350].map((index) => output.voltage_levels[index]),
-  ).toEqual([0, 0, 1, 0])
+  ).toEqual([0, 1, 0, 1])
   expect(renderXorTruthTableSnapshot(graphs)).toMatchSvgSnapshot(
     import.meta.path,
   )
