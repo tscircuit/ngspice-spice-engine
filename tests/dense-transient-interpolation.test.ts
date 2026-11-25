@@ -42,7 +42,7 @@ C1 out 0 100n
   }
 
   const graphs = eecircuitResultToSimulationGraphs(eecircuitResult, spice)
-  expect(timeReads).toBeGreaterThan(1_000_000)
+  expect(timeReads).toBeLessThan(50_000)
   const circuitJson = simulationGraphsToCircuitJson(graphs, spice)
   const voltageGraph = circuitJson.find(
     (result) => result.type === "simulation_transient_voltage_graph",
