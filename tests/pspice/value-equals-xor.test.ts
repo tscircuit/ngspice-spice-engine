@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { createNgspiceSpiceEngine } from "../../lib"
-import { renderSimulationSnapshot } from "../fixtures/render-simulation-snapshot"
+import { renderXorTruthTableSnapshot } from "../fixtures/render-xor-truth-table-snapshot"
 
 test("simulates the TPS82085 VALUE= XOR truth table", async () => {
   const spiceEngine = await createNgspiceSpiceEngine()
@@ -24,10 +24,7 @@ Rout out 0 1k
   expect(
     [50, 150, 250, 350].map((index) => output.voltage_levels[index]),
   ).toEqual([0, 0, 1, 0])
-  expect(
-    renderSimulationSnapshot({
-      simulationResultCircuitJson,
-      name: "TPS82085 VALUE= XOR truth table",
-    }),
-  ).toMatchSvgSnapshot(import.meta.path)
+  expect(renderXorTruthTableSnapshot(output)).toMatchSvgSnapshot(
+    import.meta.path,
+  )
 })
