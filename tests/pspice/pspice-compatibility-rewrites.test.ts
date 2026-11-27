@@ -46,3 +46,41 @@ test("rewrites only PSPICE VALUE boolean spaced caret operators", () => {
     ].join("\n"),
   )
 })
+
+test("rewrites parenthesized, unspaced, and compound PSPICE VALUE boolean carets while preserving exponentiation", () => {
+  const spice = [
+    "E_PAREN Y 0 VALUE={IF((V(A) > 0.5) ^ (V(B) > 0.5), 1, 0)}",
+    "G_PAREN 0 Y VALUE {{IF(((V(A) > {VTHRESH})) ^ ((V(B) >= {VTHRESH})), 1m, 0)}}",
+    "E_UNSPACED Y 0 VALUE={IF(V(A)>0.5^V(B)>.5,1,0)}",
+    "E_PAREN_UNSPACED Y 0 VALUE={IF((V(A)>0.5)^(V(B)>.5),1,0)}",
+    "E_PARITY Y 0 VALUE={IF((V(A) > 0.5) ^ (V(B) > 0.5) ^ (V(C) > 0.5), 1, 0)}",
+    "E_NEG Y 0 VALUE={IF(!(V(A) > 0.5) ^ (V(B) > 0.5), 1, 0)}",
+    "E_AND_CHAIN Y 0 VALUE={IF(V(Z) > 0.5 & V(A) > 0.5 ^ V(B) > 0.5, 1, 0)}",
+    "E_OR_CHAIN Y 0 VALUE={IF(V(Z) > 0.5 | V(A) > 0.5 ^ V(B) > 0.5, 1, 0)}",
+    "E_CURR Y 0 VALUE={IF((I(VSENSE) > 1m) ^ (V(A) - V(REF) > 0.5), 1, 0)}",
+    "E_NESTED_POW_XOR Y 0 VALUE={IF(((V(A) + 1) ^ 2 > 1.5) ^ (V(B) > 0.5), 1, 0)}",
+    "E_PAREN_POW Y 0 VALUE={(V(A) + 1) ^ 2}",
+    "E_PAREN_POW_CMP Y 0 VALUE={IF((V(A) + 1) ^ 2 > 4, 1, 0)}",
+    "E_RHS_POW_CMP Y 0 VALUE={IF(7 < 2 ^ 3, 1, 0)}",
+    "E_NODE_POW Y 0 VALUE={(V(A)) ^ (V(B))}",
+  ].join("\n")
+
+  expect(rewritePspiceCompatibilitySyntax(spice)).toBe(
+    [
+      "E_PAREN Y 0 VALUE={IF((V(A) > 0.5) != (V(B) > 0.5), 1, 0)}",
+      "G_PAREN 0 Y VALUE {{IF(((V(A) > {VTHRESH})) != ((V(B) >= {VTHRESH})), 1m, 0)}}",
+      "E_UNSPACED Y 0 VALUE={IF(V(A)>0.5!=V(B)>.5,1,0)}",
+      "E_PAREN_UNSPACED Y 0 VALUE={IF((V(A)>0.5)!=(V(B)>.5),1,0)}",
+      "E_PARITY Y 0 VALUE={IF((V(A) > 0.5) != (V(B) > 0.5) != (V(C) > 0.5), 1, 0)}",
+      "E_NEG Y 0 VALUE={IF(!(V(A) > 0.5) != (V(B) > 0.5), 1, 0)}",
+      "E_AND_CHAIN Y 0 VALUE={IF((V(Z) > 0.5 & V(A) > 0.5) != V(B) > 0.5, 1, 0)}",
+      "E_OR_CHAIN Y 0 VALUE={IF(V(Z) > 0.5 | V(A) > 0.5 != V(B) > 0.5, 1, 0)}",
+      "E_CURR Y 0 VALUE={IF((I(VSENSE) > 1m) != (V(A) - V(REF) > 0.5), 1, 0)}",
+      "E_NESTED_POW_XOR Y 0 VALUE={IF(((V(A) + 1) ^ 2 > 1.5) != (V(B) > 0.5), 1, 0)}",
+      "E_PAREN_POW Y 0 VALUE={(V(A) + 1) ^ 2}",
+      "E_PAREN_POW_CMP Y 0 VALUE={IF((V(A) + 1) ^ 2 > 4, 1, 0)}",
+      "E_RHS_POW_CMP Y 0 VALUE={IF(7 < 2 ^ 3, 1, 0)}",
+      "E_NODE_POW Y 0 VALUE={(V(A)) ^ (V(B))}",
+    ].join("\n"),
+  )
+})
