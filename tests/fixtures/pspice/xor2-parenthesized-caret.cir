@@ -1,0 +1,13 @@
+* TI XOR2_BASIC_GEN style parenthesized PSpice ABM boolean XOR gate
+.SUBCKT XOR2_PAREN_GEN A B Y PARAMS: VDD=1 VSS=0 VTHRESH=0.5
+E_ABMGATE YINT 0 VALUE {{IF((V(A) > {VTHRESH}) ^ (V(B) > {VTHRESH}), {VDD}, {VSS})}}
+RINT YINT Y 1
+CINT Y 0 1p
+.ENDS XOR2_PAREN_GEN
+
+VA a 0 PWL(0 0 0.999u 0 1u 1 2.999u 1 3u 0 4u 0)
+VB b 0 PWL(0 0 1.999u 0 2u 1 4u 1)
+X1 a b out XOR2_PAREN_GEN PARAMS: VDD=1 VSS=0 VTHRESH=0.5
+.print tran v(a) v(b) v(out)
+.tran 10n 4u UIC
+.end
